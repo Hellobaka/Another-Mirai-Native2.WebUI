@@ -74,10 +74,10 @@ POST /api/auth/login
 }
 ```
 
-### 1.2 校验 Token
+### 1.2 刷新 Token
 
 ```
-GET /api/auth/check
+GET /api/auth/refresh
 ```
 
 **Response:**
@@ -88,6 +88,14 @@ GET /api/auth/check
 }
 ```
 
+**Response (失败):**
+```jsonc
+{
+  "code": 401,
+  "message": "未登录或登录失效"
+}
+```
+
 ---
 
 ## 2. 仪表盘
@@ -95,7 +103,7 @@ GET /api/auth/check
 ### 2.1 系统概览
 
 ```
-GET /api/dashboard
+GET /api/dashboard/base-information
 ```
 
 **Response:**
@@ -103,50 +111,69 @@ GET /api/dashboard
 {
   "code": 0,
   "data": {
-    "os": "Microsoft Windows 11",
-    "cpuUsage": 23.5,
-    "memoryTotalMb": 16384,
-    "memoryUsedMb": 8192,
-    "pluginCount": 5,
-    "enabledPluginCount": 3,
-    "version": "2.12.1",
-    "startTime": "2026-05-21T10:30:00",
-    "currentQQ": 123456789,
-    "currentNick": "机器人昵称"
-  }
+    "osVersion": "Microsoft Windows 11 家庭版 中文版 64 位 版本 25H2",
+    "cpu": "AMD Ryzen 5 PRO 4650U with Radeon Graphics @ 2.10 GHz",
+    "totalMemory": 15229,
+    "startedTime": "00:00:00:14",
+    "version": "2.12.1.0",
+    "currentBotQQ": 10001,
+    "currentBotNick": "",
+    "loadedPluginCount": 0
+  },
+  "message": null
 }
 ```
 
-### 2.2 进程列表
+### 2.2 系统占用
 
 ```
-GET /api/dashboard/processes
+GET /api/dashboard/usages
 ```
 
 **Response:**
 ```jsonc
 {
   "code": 0,
-  "data": [
-    {
-      "appId": "com.example.plugin",
-      "pluginName": "示例插件",
-      "pid": 12345,
-      "enabled": true,
-      "cpuUsage": 2.1,
-      "memoryMb": 45.3
-    }
-  ]
+  "data": {
+    "cpuUsage": 20.830696,
+    "memoryUsage": 85.56701030927834,
+    "cpuCurrentFrequency": 3096.049072265625,
+    "usedMemoryInMB": 13031,
+    "totalMemoryInMB": 15229
+  },
+  "message": null
 }
 ```
 
-### 2.3 杀进程
+### 2.3 插件占用
 
 ```
-POST /api/dashboard/processes/{pid}/kill
+GET /api/dashboard/plugin-usages
 ```
 
-**Response:** `{ "code": 0, "data": null }`
+**Response:**
+```jsonc
+{
+  "code": 0,
+  "data": {
+    "totalProcessMemory": 42.65625,
+    "totalProcessCPU": 0.5207086756763764,
+    "pluginUsages": [
+      {
+        "id": 0,
+        "pid": 27068,
+        "pluginName": "主框架",
+        "running": true,
+        "cpuUsage": 0.5207086756763764,
+        "memoryUsage": 42.65625
+      }
+    ]
+  },
+  "message": null
+}
+```
+
+> Id = 0 代表框架本身
 
 ---
 
