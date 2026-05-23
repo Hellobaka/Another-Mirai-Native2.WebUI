@@ -1,11 +1,26 @@
-<script setup></script>
+<script setup lang="ts">
+import { useAppStore } from '@/stores/app'
+
+const app = useAppStore()
+</script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <v-app :theme="app.themeMode">
+    <router-view v-slot="{ Component }">
+      <transition name="page" mode="out-in">
+        <component :is="Component" />
+      </transition>
+    </router-view>
+  </v-app>
 </template>
 
-<style scoped></style>
+<style>
+@import '@/styles/variables.css';
+
+body,
+body * {
+  font-family: 'Noto Sans Mono', sans-serif !important;
+  font-optical-sizing: auto;
+  font-variation-settings: 'wdth' 100;
+}
+</style>

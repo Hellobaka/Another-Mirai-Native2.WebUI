@@ -1,0 +1,52 @@
+:root {
+  --glass-bg: rgba(var(--v-theme-surface), 0.85);
+  --glass-border: rgba(var(--v-theme-on-surface), 0.1);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --glass-blur: blur(20px);
+  --transition-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --border-radius-card: 16px;
+}
+
+.v-theme--light {
+  --glass-bg: rgba(var(--v-theme-surface), 0.92);
+  --glass-border: rgba(var(--v-theme-on-surface), 0.12);
+}
+
+.v-theme--dark {
+  --glass-bg: rgba(var(--v-theme-surface), 0.65);
+  --glass-border: rgba(var(--v-theme-on-surface), 0.08);
+}
+
+.glass-card {
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow) !important;
+  border-radius: var(--border-radius-card) !important;
+}
+
+.page-enter-active {
+  transition: all 0.3s var(--transition-smooth);
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.page-leave-active {
+  transition: all 0.2s var(--transition-smooth);
+}
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.list-enter-active {
+  transition: all 0.3s var(--transition-spring);
+}
+.list-enter-from {
+  opacity: 0;
+  transform: translateY(16px);
+}
