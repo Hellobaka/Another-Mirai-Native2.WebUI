@@ -182,7 +182,7 @@ GET /api/dashboard/plugin-usages
 ### 3.1 插件列表
 
 ```
-GET /api/plugins
+GET /api/plugin
 ```
 
 **Response:**
@@ -191,98 +191,358 @@ GET /api/plugins
   "code": 0,
   "data": [
     {
-      "appId": "com.example.plugin",
-      "pluginName": "示例插件",
-      "enabled": true,
-      "hasConnection": true,
-      "author": "作者名",
+      "authCode": 10001,
+      "enabled": false,
+      "pluginId": "启用插件以查看 AppId",
+      "pluginName": "水银掷筛机",
+      "author": "落花茗",
+      "description": "R!",
+      "version": "1.1.3",
+      "auth": [
+        101,
+        106
+      ]
+    },
+    {
+      "authCode": 10002,
+      "enabled": false,
+      "pluginId": "启用插件以查看 AppId",
+      "pluginName": "Steam视奸机",
+      "author": "落花茗",
+      "description": "玩啥呢 不叫我",
       "version": "1.0.0",
-      "description": "插件描述",
-      "authCode": 1001,
-      "pid": 12345
+      "auth": [
+        101,
+        106,
+        161
+      ]
+    },
+    {
+      "authCode": 10003,
+      "enabled": true,
+      "pluginId": "me.cqp.luohuaming.AdvancedDice",
+      "pluginName": "水银掷骰机2",
+      "author": "落花茗",
+      "description": "R!!",
+      "version": "2.0.0",
+      "auth": [
+        20,
+        30,
+        101,
+        103,
+        106,
+        110,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        127,
+        128,
+        130,
+        131,
+        132,
+        140,
+        150,
+        151,
+        160,
+        161,
+        162,
+        180
+      ]
     }
-  ]
+  ],
+  "message": null
+}
+```
+
+### 3.2 拉取插件元数据
+
+```
+POST /api/plugin/{authCode}/info
+```
+
+#### 200
+
+**Response:** 
+```json
+{
+  "code": 0,
+  "data": {
+    "authCode": 10001,
+    "appId": "",
+    "loaderType": 0,
+    "ret": 1,
+    "apiver": 9,
+    "name": "水银掷筛机",
+    "version": "1.1.3",
+    "version_id": 1,
+    "author": "落花茗",
+    "description": "R!",
+    "_event": [
+      {
+        "id": 1,
+        "type": 21,
+        "name": "私聊消息处理",
+        "function": "_eventPrivateMsg",
+        "priority": 10,
+        "address": 0
+      },
+      {
+        "id": 2,
+        "type": 2,
+        "name": "群消息处理",
+        "function": "_eventGroupMsg",
+        "priority": 10,
+        "address": 0
+      },
+      {
+        "id": 1001,
+        "type": 1001,
+        "name": "酷Q启动事件",
+        "function": "_eventStartup",
+        "priority": 30000,
+        "address": 0
+      }
+    ],
+    "menu": [],
+    "status": [],
+    "auth": [
+      101,
+      106
+    ]
+  },
+  "message": null
+}
+```
+
+### 400
+```json
+{
+  "code": 404,
+  "data": null,
+  "message": "未找到对应 AuthCode 的插件"
 }
 ```
 
 ### 3.2 启用插件
 
 ```
-POST /api/plugins/{appId}/enable
+POST /api/plugin/{authCode}/enable
 ```
 
-**Response:** `{ "code": 0, "data": null }`
+#### 200
+
+**Response:** 
+```json
+{
+  "code": 0,
+  "data": {
+    "authCode": 10001,
+    "enabled": true,
+    "pluginId": "me.cqp.luohuaming.Dice",
+    "pluginName": "水银掷筛机",
+    "author": "落花茗",
+    "description": "R!",
+    "version": "1.1.3",
+    "auth": [
+      101,
+      106
+    ]
+  },
+  "message": null
+}
+```
+
+### 400
+```json
+{
+  "code": 404,
+  "data": null,
+  "message": "未找到对应 AuthCode 的插件"
+}
+```
 
 ### 3.3 禁用插件
 
 ```
-POST /api/plugins/{appId}/disable
+POST /api/plugin/{authCode}/disable
 ```
 
-**Response:** `{ "code": 0, "data": null }`
+#### 200
+
+**Response:** 
+```json
+{
+  "code": 0,
+  "data": {
+    "authCode": 10001,
+    "enabled": false,
+    "pluginId": "启用插件以查看 AppId",
+    "pluginName": "水银掷筛机",
+    "author": "落花茗",
+    "description": "R!",
+    "version": "1.1.3",
+    "auth": [
+      101,
+      106
+    ]
+  },
+  "message": null
+}
+```
+
+### 400
+```json
+{
+  "code": 404,
+  "data": null,
+  "message": "未找到对应 AuthCode 的插件"
+}
+```
 
 ### 3.4 重载单个
 
 ```
-POST /api/plugins/{appId}/reload
+POST /api/plugin/{authCode}/reload
 ```
 
-**Response:** `{ "code": 0, "data": null }`
+#### 200
+
+**Response:** 
+```json
+{
+  "code": 0,
+  "data": {
+    "authCode": 10005,
+    "enabled": true,
+    "pluginId": "me.cqp.luohuaming.AdvancedDice",
+    "pluginName": "水银掷骰机2",
+    "author": "落花茗",
+    "description": "R!!",
+    "version": "2.0.0",
+    "auth": [
+      20,
+      30,
+      101,
+      103,
+      106,
+      110,
+      120,
+      121,
+      122,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      130,
+      131,
+      132,
+      140,
+      150,
+      151,
+      160,
+      161,
+      162,
+      180
+    ]
+  },
+  "message": null
+}
+```
+
+### 400
+```json
+{
+  "code": 404,
+  "data": null,
+  "message": "未找到对应 AuthCode 的插件"
+}
+```
 
 ### 3.5 重载全部
 
 ```
-POST /api/plugins/reload-all
+POST /api/plugin/reload-all
 ```
 
-**Response:** `{ "code": 0, "data": null }`
-
-### 3.6 测试群消息
-
-```
-POST /api/plugins/{appId}/test/group
-```
-
-**Request:**
-```jsonc
-{
-  "groupId": 123456789,
-  "qqId": 987654321,
-  "message": "测试消息",
-  "messageId": 0
-}
-```
-
-**Response:**
-```jsonc
+#### 200
+```json
 {
   "code": 0,
-  "data": { "messageId": 1 }
+  "data": [
+    {
+      "authCode": 10004,
+      "enabled": false,
+      "pluginId": "启用插件以查看 AppId",
+      "pluginName": "水银掷筛机",
+      "author": "落花茗",
+      "description": "R!",
+      "version": "1.1.3",
+      "auth": [
+        101,
+        106
+      ]
+    },
+    {
+      "authCode": 10005,
+      "enabled": false,
+      "pluginId": "启用插件以查看 AppId",
+      "pluginName": "Steam视奸机",
+      "author": "落花茗",
+      "description": "玩啥呢 不叫我",
+      "version": "1.0.0",
+      "auth": [
+        101,
+        106,
+        161
+      ]
+    },
+    {
+      "authCode": 10006,
+      "enabled": true,
+      "pluginId": "me.cqp.luohuaming.AdvancedDice",
+      "pluginName": "水银掷骰机2",
+      "author": "落花茗",
+      "description": "R!!",
+      "version": "2.0.0",
+      "auth": [
+        20,
+        30,
+        101,
+        103,
+        106,
+        110,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        127,
+        128,
+        130,
+        131,
+        132,
+        140,
+        150,
+        151,
+        160,
+        161,
+        162,
+        180
+      ]
+    }
+  ],
+  "message": null
 }
 ```
 
-### 3.7 测试私聊消息
-
-```
-POST /api/plugins/{appId}/test/private
-```
-
-**Request:**
-```jsonc
-{
-  "qqId": 987654321,
-  "message": "测试消息",
-  "messageId": 0
-}
-```
-
-**Response:**
-```jsonc
-{
-  "code": 0,
-  "data": { "messageId": 1 }
-}
-```
 
 ---
 
@@ -291,7 +551,7 @@ POST /api/plugins/{appId}/test/private
 ### 4.1 可用协议列表
 
 ```
-GET /api/protocols
+GET /api/protocol/list
 ```
 
 **Response:**
@@ -299,70 +559,210 @@ GET /api/protocols
 {
   "code": 0,
   "data": [
-    { "name": "OneBot v11", "isCurrent": true },
-    { "name": "MiraiAPIHttp", "isCurrent": false },
-    { "name": "Lagrange.Core", "isCurrent": false }
-  ]
+    "MiraiAPIHttp",
+    "Lagrange.Core",
+    "NoConnection",
+    "OneBot v11",
+    "Satori v1"
+  ],
+  "message": null
 }
 ```
 
-### 4.2 当前协议详情
+### 4.2 当前协议名称以及连接状态
 
 ```
-GET /api/protocols/current
+GET /api/protocol/current
 ```
+
+#### 200
 
 **Response:**
 ```jsonc
 {
   "code": 0,
   "data": {
-    "name": "OneBot v11",
-    "isConnected": true,
-    "config": {
-      "Host": "127.0.0.1",
-      "Port": "6700",
-      "AccessToken": ""
-    }
-  }
+    "name": "NoConnection",
+    "isConnected": true
+  },
+  "message": null
 }
 ```
 
-### 4.3 切换协议
+#### 404
+```json
+{
+  "code": 404,
+  "message": "当前没有已连接协议，无法执行断开"
+}
+```
+
+### 4.3 断开当前协议
 
 ```
-POST /api/protocols/switch
+Get /api/protocol/disconnect
 ```
+
+#### 200
 
 **Request:**
 ```jsonc
 {
-  "name": "Lagrange.Core",
-  "config": {
-    "Key1": "Value1"
-  }
+  "code": 0,
+  "data": null,
+  "message": null
 }
 ```
 
-**Response:**
-```jsonc
+#### 400
+```json
+{
+  "code": 400,
+  "message": "当前没有已连接协议，无法执行断开"
+}
+```
+
+```json
+{
+  "code": 500,
+  "message": "断开连接失败"
+}
+```
+
+```json
+{
+  "code": 500,
+  "message": "由于服务器发生异常，断开连接失败"
+}
+```
+
+### 4.5 连接到新协议
+
+```
+Get /api/protocol/connect/{name}
+```
+
+#### 200
+
+**Response:** 
+```json
 {
   "code": 0,
-  "data": { "name": "Lagrange.Core", "isConnected": true }
+  "data": null,
+  "message": null
 }
 ```
 
-### 4.4 断开协议
+#### 400
+```json
+{
+  "code": 400,
+  "message": "当前已连接到 {p.Name} 协议，连接到其他协议前请先断开"
+}
+```
+
+```json
+{
+  "code": 400,
+  "message": "连接到 {name} 协议失败"
+}
+```
+
+```json
+{
+  "code": 500,
+  "message": "由于服务器发生异常，连接到 {name} 协议失败"
+}
+```
+
+### 4.6 获取协议配置字典
+```
+Get /api/protocol/config/{name}
+```
+
+#### 200
+
+```json
+{
+  "code": 0,
+  "data": {
+    "Ws": "",
+    "AuthKey": ""
+  },
+  "message": null
+}
+```
+
+#### 404
+
+```json
+{
+  "code": 404,
+  "message": "未找到名称为 {name} 的协议"
+}
+```
+
+#### 400
+
+```json
+{
+  "code": 400,
+  "message": "由于服务器发生异常，获取协议配置参数失败"
+}
 
 ```
-POST /api/protocols/disconnect
+
+### 4.7 设置协议配置字典
+```
+Post /api/protocol/config/{name}
+```
+Body: 
+```json
+{
+  "Ws": "ws://127.0.0.1:11451",
+  "AuthKey": "1919810"
+}
 ```
 
-**Response:** `{ "code": 0, "data": null }`
+
+#### 200
+
+```json
+{
+  "code": 0,
+  "data": null,
+  "message": null
+}
+```
+
+#### 404
+
+```json
+{
+  "code": 404,
+  "message": "未找到名称为 {name} 的协议"
+}
+```
+
+#### 400
+
+```json
+{
+  "code": 400,
+  "message": "由于服务器发生异常，获取协议配置参数失败"
+}
+```
+
+```json
+{
+  "code": 400,
+  "message": "设置协议连接参数失败，检查传递参数是否缺失键或无效值"
+}
+```
 
 ---
 
-## 5. 聊天
+## 5. 聊天（暂不实现，API定义大概率随开发而改动，不要参考）
 
 ### 5.1 会话列表
 
@@ -531,67 +931,133 @@ GET /api/chat/groups/{groupId}/members/{qqId}/nick
 ### 6.1 查询日志
 
 ```
-GET /api/logs?page=1&pageSize=20&level=warning&source=Plugin&keyword=错误&startTime=2026-05-01&endTime=2026-05-21
+GET /api/log
 ```
 
-**参数 (全部可选):**
+**参数:**
 
 | 参数 | 类型 | 说明 |
 |---|---|---|
-| `page` | int | 页码 |
+| `priority` | int | 最小日志等级 |
+| `pageIndex` | int | 页码数 |
 | `pageSize` | int | 每页条数 |
-| `level` | string | `debug` / `info` / `infosend` / `warning` / `error` / `fatal` |
-| `source` | string | 来源，模糊匹配 |
-| `keyword` | string | 关键词，模糊搜索详情 |
-| `startTime` | datetime | 开始时间 |
-| `endTime` | datetime | 结束时间 |
+| `search` | string | 来源，模糊匹配（可选） |
+| `asc` | bool | 按时间升序（可选） |
+| `start` | datetime | 开始时间（可选） |
+| `end` | datetime | 结束时间（可选） |
 
 **Response:**
-```jsonc
+```json
 {
   "code": 0,
   "data": {
     "items": [
       {
-        "id": 1,
-        "time": "2026-05-21T12:00:00",
-        "level": "warning",
-        "source": "Another-Mirai-Native",
-        "name": "初始化",
-        "detail": "连接协议失败",
-        "status": "unread"
+        "id": 267,
+        "time": "2026-05-23T14:16:32+08:00",
+        "priority": 11,
+        "source": "AMN框架",
+        "status": "",
+        "name": "加载插件",
+        "detail": "配置中启动启用插件为 1 个，开始加载..."
+      },
+      {
+        "id": 268,
+        "time": "2026-05-23T14:16:32+08:00",
+        "priority": 11,
+        "source": "AMN框架",
+        "status": "",
+        "name": "加载插件",
+        "detail": "水银掷筛机 插件信息读取成功"
+      },
+      {
+        "id": 269,
+        "time": "2026-05-23T14:16:32+08:00",
+        "priority": 11,
+        "source": "AMN框架",
+        "status": "",
+        "name": "加载插件",
+        "detail": "Steam视奸机 插件信息读取成功"
+      },
+      {
+        "id": 270,
+        "time": "2026-05-23T14:16:32+08:00",
+        "priority": 11,
+        "source": "AMN框架",
+        "status": "",
+        "name": "加载插件",
+        "detail": "将使用主程序加载"
+      },
+      {
+        "id": 271,
+        "time": "2026-05-23T14:16:32+08:00",
+        "priority": 11,
+        "source": "AMN框架",
+        "status": "",
+        "name": "加载插件",
+        "detail": "水银掷骰机2 插件信息读取成功"
+      },
+      {
+        "id": 272,
+        "time": "2026-05-23T14:16:32+08:00",
+        "priority": 11,
+        "source": "AMN框架",
+        "status": "√ 91 ms",
+        "name": "加载插件",
+        "detail": "加载完成，启用插件..."
+      },
+      {
+        "id": 273,
+        "time": "2026-05-23T14:16:34+08:00",
+        "priority": 11,
+        "source": "AMN框架",
+        "status": "√ 1361 ms",
+        "name": "启用插件",
+        "detail": "插件启用完成，共加载了 1 个插件，开始调用启动事件..."
+      },
+      {
+        "id": 274,
+        "time": "2026-05-23T14:16:34+08:00",
+        "priority": 11,
+        "source": "AMN框架",
+        "status": "",
+        "name": "加载 C# 插件",
+        "detail": "水银掷骰机2, 加载成功"
+      },
+      {
+        "id": 275,
+        "time": "2026-05-23T14:16:34+08:00",
+        "priority": 10,
+        "source": "水银掷骰机2",
+        "status": "",
+        "name": "水银掷骰机2",
+        "detail": "插件已启用"
+      },
+      {
+        "id": 276,
+        "time": "2026-05-23T14:16:34+08:00",
+        "priority": 11,
+        "source": "AMN框架",
+        "status": "√ 39 ms",
+        "name": "启用插件",
+        "detail": "插件启动完成，开始处理消息逻辑"
       }
     ],
-    "total": 150,
-    "page": 1,
-    "pageSize": 20
-  }
+    "totalCount": 276,
+    "totalPage": 28
+  },
+  "message": null
 }
 ```
-
-### 6.2 更新日志状态
-
-```
-POST /api/logs/{id}/status
-```
-
-**Request:**
-```jsonc
-{
-  "status": "read"
-}
-```
-
-**Response:** `{ "code": 0, "data": null }`
 
 ---
 
 ## 7. 配置
 
-### 7.1 获取配置
+### 7.1 获取核心配置
 
 ```
-GET /api/config
+GET /api/config/core
 ```
 
 **Response:**
@@ -599,45 +1065,286 @@ GET /api/config
 {
   "code": 0,
   "data": {
-    "autoProtocol": "OneBot v11",
-    "autoConnect": true,
-    "enableChat": true,
-    "debugMode": false,
-    "showTaskBar": false,
-    "autoEnablePlugins": ["插件A", "插件B"],
-    "testingAuthCode": 1001,
-    "serverType": 1
-  }
+    "AutoConnect": {
+      "title": "协议自动连接",
+      "description": "",
+      "type": "Boolean",
+      "value": true
+    },
+    "AutoProtocol": {
+      "title": "自动连接协议",
+      "description": "选择启动时自动连接的协议",
+      "type": "String",
+      "value": "NoConnection"
+    },
+    "ReconnectTime": {
+      "title": "重新连接间隔时间",
+      "description": "协议失去连接时每次重新连接的间隔时间",
+      "type": "Int32",
+      "value": 5000
+    },
+    "PluginExitWhenCoreExit": {
+      "title": "框架退出时插件自动退出",
+      "description": "主程序退出时自动关闭所有插件",
+      "type": "Boolean",
+      "value": true
+    },
+    "RestartPluginIfDead": {
+      "title": "插件崩溃时自动重启",
+      "description": "插件发生异常时自动重新启动",
+      "type": "Boolean",
+      "value": false
+    },
+    "HeartBeatInterval": {
+      "title": "心跳间隔时间",
+      "description": "核心与插件之间的心跳检测间隔",
+      "type": "Int32",
+      "value": 30000
+    },
+    "PluginInvokeTimeout": {
+      "title": "插件方法调用超时",
+      "description": "",
+      "type": "Int32",
+      "value": 120000
+    },
+    "LoadTimeout": {
+      "title": "插件载入超时",
+      "description": "",
+      "type": "Int32",
+      "value": 10000
+    },
+    "UseDatabase": {
+      "title": "日志使用数据库",
+      "description": "是否将日志存储到数据库",
+      "type": "Boolean",
+      "value": true
+    },
+    "MessageCacheSize": {
+      "title": "消息缓存数量",
+      "description": "内存中缓存的消息数量限制",
+      "type": "Int32",
+      "value": 4096
+    },
+    "EnableChatImageCacheMaxSizeControl": {
+      "title": "启用最大缓存图片体积控制",
+      "description": "缓存文件夹超出体积时，会从最久的图片开始删除",
+      "type": "Boolean",
+      "value": false
+    },
+    "MaxChatImageCacheFolderSize": {
+      "title": "缓存文件夹最大大小",
+      "description": "",
+      "type": "Int64",
+      "value": 1024
+    },
+    "EnableChatImageCacheExpireTimeControl": {
+      "title": "启用缓存图片最大储存时限控制",
+      "description": "图片最大保留一定天数后，会从最久的图片开始删除",
+      "type": "Boolean",
+      "value": false
+    },
+    "ChatImageCacheExpireTime": {
+      "title": "缓存图片最大储存时限",
+      "description": "",
+      "type": "Int64",
+      "value": 30
+    },
+    "DebugMode": {
+      "title": "调试模式",
+      "description": "启用调试模式输出详细信息",
+      "type": "Boolean",
+      "value": false
+    },
+    "ActionAfterOfflineSeconds": {
+      "title": "离线操作等待时间",
+      "description": "离线后执行操作的等待时间",
+      "type": "Int32",
+      "value": 120
+    },
+    "OfflineActionSendEmail": {
+      "title": "启用离线后邮件发送",
+      "description": "",
+      "type": "Boolean",
+      "value": false
+    },
+    "OfflineActionEmail_SMTPServer": {
+      "title": "SMTP服务器",
+      "description": "",
+      "type": "String",
+      "value": "smtp.qq.com"
+    },
+    "OfflineActionEmail_SMTPPort": {
+      "title": "SMTP服务器端口",
+      "description": "",
+      "type": "UInt16",
+      "value": 587
+    },
+    "OfflineActionEmail_SMTPUsername": {
+      "title": "SMTP用户名",
+      "description": "",
+      "type": "String",
+      "value": ""
+    },
+    "OfflineActionEmail_SMTPPassport": {
+      "title": "SMTP授权码",
+      "description": "",
+      "type": "String",
+      "value": ""
+    },
+    "OfflineActionEmail_SMTPSenderEmail": {
+      "title": "邮件发送方邮箱",
+      "description": "",
+      "type": "String",
+      "value": ""
+    },
+    "OfflineActionEmail_SMTPReceiveEmail": {
+      "title": "邮件接收方邮箱",
+      "description": "",
+      "type": "String",
+      "value": ""
+    },
+    "OfflineActionRunCommand": {
+      "title": "启用离线后执行终端指令",
+      "description": "",
+      "type": "Boolean",
+      "value": false
+    },
+    "OfflineActionCommands": {
+      "title": "离线后执行终端指令",
+      "description": "",
+      "type": "List`1",
+      "value": []
+    }
+  },
+  "message": null
 }
 ```
 
 ### 7.2 更新配置项
 
 ```
-PUT /api/config
+Post /api/config/core
 ```
 
 **Request:**
 ```jsonc
 {
-  "key": "autoProtocol",
-  "value": "Lagrange.Core"
+  "key": "MessageCacheSize",
+  "value": 1024
 }
 ```
 
+#### 200
+
 **Response:** `{ "code": 0, "data": null }`
 
-### 7.3 测试授权码
+#### 404
+
+```json
+{
+  "code": 404,
+  "data": null,
+  "message": "未能找到名称为 MessageCacheSize1 的配置项"
+}
+```
+
+#### 400
+
+```json
+{
+  "code": 400,
+  "data": null,
+  "message": "无效的数值转换，检查写入值是否与配置类型匹配"
+}
+```
+
+### 7.3 获取协议配置项
 
 ```
-GET /api/config/testing-authcode
+Get /api/config/protocol/{name}
 ```
 
-**Response:**
-```jsonc
+
+#### 200
+
+```json
 {
   "code": 0,
-  "data": { "authCode": 1001 }
+  "data": {
+    "WebSocketURL": {
+      "title": "正向 WebSocket 服务器 Url",
+      "description": "",
+      "type": "String",
+      "value": "1"
+    },
+    "AuthKey": {
+      "title": "鉴权 Token",
+      "description": "",
+      "type": "String",
+      "value": "null"
+    },
+    "QQ": {
+      "title": "目标 QQ",
+      "description": "",
+      "type": "Int64",
+      "value": 3
+    },
+    "FullMemberInfo": {
+      "title": "详细群成员信息",
+      "description": "调用更详细的群成员信息接口 但是可能大幅度加长调用时长",
+      "type": "Boolean",
+      "value": false
+    }
+  },
+  "message": null
+}
+```
+
+#### 404
+
+```json
+{
+  "code": 404,
+  "data": null,
+  "message": "未能找到名称为 MiraiAPIHttp1 的协议配置"
+}
+```
+
+### 7.4 更新配置项
+
+```
+Post /api/config/protocol/{name}
+```
+
+**Request:**
+```jsonc
+{
+  "key": "FullMemberInfo",
+  "value": false
+}
+```
+
+#### 200
+
+**Response:** `{ "code": 0, "data": null }`
+
+#### 404
+
+```json
+{
+  "code": 404,
+  "data": null,
+  "message": "未能找到名称为 MessageCacheSize1 的配置项"
+}
+```
+
+#### 400
+
+```json
+{
+  "code": 400,
+  "data": null,
+  "message": "无效的数值转换，检查写入值是否与配置类型匹配"
 }
 ```
 
@@ -645,15 +1352,16 @@ GET /api/config/testing-authcode
 
 ## 8. 图片
 
-### 8.1 获取缓存图片
+### 8.1 获取缓存文件
 
 ```
-GET /api/images/{hash}
+GET /file/{type}/{file}
 ```
 
-`hash`: 图片缓存 hash（从 CQ 码 `[CQ:image,hash=xxx]` 提取）
+- `type`是指文件的类型，目前有三种可选`image`（图片）、`record`（音频）、`video`（视频）
+- `file`是指文件名，有两种选项：1. 缓存哈希 2. 文件名
 
-**Response:** 图片二进制，`Content-Type: image/jpeg` 或 `image/png`
+**Response:** 301重定向至文件的原生url
 
 ---
 
