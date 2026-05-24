@@ -6,7 +6,7 @@ export type {
   PluginUsageData,
   DashboardPluginItem,
 } from './dashboard'
-export type { PluginDto, PluginEvent, PluginDetail } from './plugin'
+export { type PluginDto, type PluginDetail, PluginTypeLabels, AuthLabels, authLabel } from './plugin'
 export type { ProtocolStatusData } from './protocol'
 export type { GetConfigResponseItem, SetConfigRequest, CoreConfigMap, ProtocolConfigMap } from './config'
 export type { LogDto, LogQueryResultData, LogLevelValue } from './log'

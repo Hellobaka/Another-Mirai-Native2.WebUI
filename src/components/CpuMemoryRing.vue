@@ -6,6 +6,7 @@ const props = defineProps({
   label: { type: String, required: true },
   color: { type: String, default: 'primary' },
   size: { type: Number, default: 120 },
+  pending: { type: Boolean, default: false },
 })
 
 const circumference = computed(() => 2 * Math.PI * 40)
@@ -41,7 +42,7 @@ const dashOffset = computed(() => circumference.value * (1 - Math.min(props.valu
         />
       </svg>
       <div class="position-absolute d-flex flex-column align-center justify-center" style="inset: 0">
-        <span class="text-h6 font-weight-bold">{{ Math.round(value) }}%</span>
+        <span class="text-h6 font-weight-bold">{{ pending ? '—' : Math.round(value) + '%' }}</span>
       </div>
     </div>
     <span class="text-caption text-medium-emphasis mt-2">{{ label }}</span>

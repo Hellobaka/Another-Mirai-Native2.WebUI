@@ -1,3 +1,10 @@
+/* Tooltip: dark bg + white text, readable in both light and dark themes */
+.v-tooltip > .v-overlay__content {
+  background: rgba(30, 30, 30, 0.92) !important;
+  color: #fff !important;
+  font-size: 0.78rem !important;
+}
+
 :root {
   --glass-bg: rgba(var(--v-theme-surface), 0.85);
   --glass-border: rgba(var(--v-theme-on-surface), 0.1);
