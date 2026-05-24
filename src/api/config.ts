@@ -16,3 +16,11 @@ export function getProtocolConfig(name: string) {
 export function setProtocolConfig(name: string, key: string, value: unknown) {
   return http.post<ApiResponse>(`/config/protocol/${name}`, { key, value } as SetConfigRequest)
 }
+
+export function getWebUIConfig() {
+  return http.get<ApiResponse<CoreConfigMap>>('/config/webui')
+}
+
+export function setWebUIConfig(key: string, value: unknown) {
+  return http.post<ApiResponse>('/config/webui', { key, value } as SetConfigRequest)
+}

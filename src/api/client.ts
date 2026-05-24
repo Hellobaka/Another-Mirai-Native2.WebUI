@@ -25,7 +25,7 @@ http.interceptors.response.use(
     if (error.response?.status === 401 && !isRefreshCall) {
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(EXPIRES_KEY)
-      window.location.hash = '#/login'
+      window.location.replace('/login')
     }
     error.apiMessage = error.response?.data?.message || null
     return Promise.reject(error)

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useAppStore } from '@/stores/app'
 import { useNotifyStore } from '@/stores/notify'
+import { useHubStore } from '@/stores/hub'
 import {
   getProtocolList,
   getCurrentProtocol,
@@ -12,10 +13,12 @@ import {
 } from '@/api/protocol'
 import { setCoreConfig } from '@/api/config'
 import { getErrorMessage } from '@/api/client'
-import type { ProtocolStatusData } from '@/models'
+import type { ProtocolStatusData, ProtocolStatusPayload } from '@/models'
+import { SignalREvents } from '@/signalr/events'
 
 const app = useAppStore()
 const notify = useNotifyStore()
+const hub = useHubStore()
 app.setPageTitle('协议管理')
 
 const protocolList = ref<string[]>([])
@@ -181,12 +184,29 @@ function closeConfig() {
   }
 }
 
-onMounted(fetchData)
+function onProtocolOnline(data: ProtocolStatusPayload) {
+  currentProtocol.value = { name: data.name, isConnected: true }
+}
+
+function onProtocolOffline(data: ProtocolStatusPayload) {
+  currentProtocol.value = { name: data.name, isConnected: false }
+}
+
+onMounted(() => {
+  hub.on(SignalREvents.ProtocolOnline, onProtocolOnline)
+  hub.on(SignalREvents.ProtocolOffline, onProtocolOffline)
+  fetchData()
+})
+
+onUnmounted(() => {
+  hub.off(SignalREvents.ProtocolOnline, onProtocolOnline)
+  hub.off(SignalREvents.ProtocolOffline, onProtocolOffline)
+})
 </script>
 
 <template>
   <div>
-    <v-fade-transition>
+    <v-fade-transition mode="out-in">
       <div v-if="firstLoad" class="pa-4">
         <v-skeleton-loader type="card" class="mb-4" />
         <v-row>

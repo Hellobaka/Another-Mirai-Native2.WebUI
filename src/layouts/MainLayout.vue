@@ -1,16 +1,21 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
 import { useNotifyStore } from '@/stores/notify'
+import { useHubStore } from '@/stores/hub'
 import { getBaseInformation } from '@/api/dashboard'
+import { SignalREvents } from '@/signalr/events'
+import type { CurrentBotInfoChangedPayload, LogAddedPayload } from '@/models'
+import { LogLevel } from '@/models'
 
 const router = useRouter()
 const auth = useAuthStore()
 const app = useAppStore()
 const notify = useNotifyStore()
+const hub = useHubStore()
 const display = useDisplay()
 
 const isMobile = computed(() => display.smAndDown.value)
@@ -35,6 +40,18 @@ async function fetchBotInfo() {
   }
 }
 
+function onBotInfoChanged(data: CurrentBotInfoChangedPayload) {
+  botQQ.value = data.qq
+  botNick.value = data.nick
+}
+
+function onLogAlert(data: LogAddedPayload) {
+  const { log } = data
+  if (log.priority < LogLevel.Warning) return
+  const severity = log.priority >= LogLevel.Error ? 'error' : 'warning'
+  notify.show(log.detail ? log.detail.slice(0, 100) : '', severity)
+}
+
 const navItems = [
   { title: '仪表盘', icon: 'mdi-view-dashboard', to: '/dashboard' },
   { title: '插件管理', icon: 'mdi-puzzle', to: '/plugins' },
@@ -44,6 +61,8 @@ const navItems = [
 ]
 
 function logout() {
+  notify.clear()
+  hub.disconnect()
   auth.logout()
   router.push({ name: 'Login' })
 }
@@ -53,11 +72,19 @@ function closeOnMobile() {
 }
 
 const APP_VERSION = '1.0.0'
-// SignalR connection state — always disconnected until hub is wired up
-const hubConnected = ref(false)
 
-onMounted(() => {
+onMounted(async () => {
   fetchBotInfo()
+  hub.on(SignalREvents.CurrentBotInfoChanged, onBotInfoChanged)
+  hub.on(SignalREvents.LogAdded, onLogAlert)
+  if (auth.token) {
+    await hub.connect(auth.token)
+  }
+})
+
+onUnmounted(() => {
+  hub.off(SignalREvents.CurrentBotInfoChanged, onBotInfoChanged)
+  hub.off(SignalREvents.LogAdded, onLogAlert)
 })
 </script>
 
@@ -143,11 +170,30 @@ onMounted(() => {
 
     <v-footer class="footer-bar" elevation="0" height="40">
       <div class="footer-inner">
-        <span class="status-dot" :class="hubConnected ? 'status-dot--on' : 'status-dot--off'" />
+        <span
+          class="status-dot"
+          :class="{
+            'status-dot--on': hub.connectionStatus === 'connected',
+            'status-dot--warn': hub.connectionStatus === 'reconnecting',
+            'status-dot--off': hub.connectionStatus === 'disconnected',
+          }"
+        />
         <span class="footer-label ml-2">
           实时推送服务:
-          <span :class="hubConnected ? 'text-success' : 'text-error'">
-            {{ hubConnected ? '已连接' : '已断开' }}
+          <span
+            :class="{
+              'text-success': hub.connectionStatus === 'connected',
+              'text-warning': hub.connectionStatus === 'reconnecting',
+              'text-error': hub.connectionStatus === 'disconnected',
+            }"
+          >
+            {{
+              hub.connectionStatus === 'connected'
+                ? '已连接'
+                : hub.connectionStatus === 'reconnecting'
+                  ? '重连中...'
+                  : '已断开'
+            }}
           </span>
         </span>
         <div class="footer-divider" />
@@ -265,9 +311,20 @@ onMounted(() => {
   box-shadow: 0 0 0 3px rgba(var(--v-theme-success), 0.2);
 }
 
+.status-dot--warn {
+  background: rgb(var(--v-theme-warning));
+  box-shadow: 0 0 0 3px rgba(var(--v-theme-warning), 0.2);
+  animation: pulse-warn 1.2s ease-in-out infinite;
+}
+
 .status-dot--off {
   background: rgb(var(--v-theme-error));
   box-shadow: 0 0 0 3px rgba(var(--v-theme-error), 0.2);
+}
+
+@keyframes pulse-warn {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 .footer-divider {

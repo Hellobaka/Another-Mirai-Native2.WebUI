@@ -4,8 +4,13 @@ import {
   HubConnectionState,
   LogLevel,
 } from '@microsoft/signalr'
+import { ref } from 'vue'
+
+export type HubStatus = 'connected' | 'reconnecting' | 'disconnected'
 
 let connection: HubConnection | null = null
+
+export const hubStatus = ref<HubStatus>('disconnected')
 
 export function getHubConnection(): HubConnection | null {
   return connection
@@ -16,15 +21,29 @@ export async function startConnection(token: string): Promise<HubConnection> {
     return connection
   }
 
-  const hubUrl = `/hub/amn?access_token=${token}`
+  if (connection) {
+    await connection.stop()
+    connection = null
+  }
 
   connection = new HubConnectionBuilder()
-    .withUrl(hubUrl)
-    .configureLogging(LogLevel.Information)
+    .withUrl(`${import.meta.env.VITE_HUB_BASE_URL ?? ''}/realtime?access_token=${token}`)
+    .configureLogging(LogLevel.Warning)
     .withAutomaticReconnect()
     .build()
 
+  connection.onreconnecting(() => {
+    hubStatus.value = 'reconnecting'
+  })
+  connection.onreconnected(() => {
+    hubStatus.value = 'connected'
+  })
+  connection.onclose(() => {
+    hubStatus.value = 'disconnected'
+  })
+
   await connection.start()
+  hubStatus.value = 'connected'
   return connection
 }
 
@@ -33,4 +52,5 @@ export async function stopConnection(): Promise<void> {
     await connection.stop()
     connection = null
   }
+  hubStatus.value = 'disconnected'
 }

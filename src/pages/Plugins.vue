@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAppStore } from '@/stores/app'
 import { useNotifyStore } from '@/stores/notify'
+import { useHubStore } from '@/stores/hub'
 import {
   getPluginList,
   getPluginInfo,
@@ -10,10 +11,12 @@ import {
   reloadPlugin,
   reloadAllPlugins,
 } from '@/api/plugin'
-import { type PluginDto, type PluginDetail, PluginTypeLabels, authLabel } from '@/models'
+import { type PluginDto, type PluginDetail, type PluginChangedPayload, PluginTypeLabels, authLabel } from '@/models'
+import { SignalREvents } from '@/signalr/events'
 
 const app = useAppStore()
 const notify = useNotifyStore()
+const hub = useHubStore()
 app.setPageTitle('插件管理')
 
 const plugins = ref<PluginDto[]>([])
@@ -100,9 +103,47 @@ function statusColor(enabled: boolean): string {
   return enabled ? 'success' : 'grey'
 }
 
+// ── SignalR: 按 authCode 去重更新或追加 ──────────────────────
+
+function upsertPlugin(plugin: PluginDto) {
+  const idx = plugins.value.findIndex((p) => p.authCode === plugin.authCode)
+  if (idx >= 0) {
+    plugins.value[idx] = plugin
+  } else {
+    plugins.value.push(plugin)
+  }
+}
+
+function onPluginEnableChanged(data: PluginChangedPayload) {
+  upsertPlugin(data.plugin)
+}
+
+function onPluginConnectStatusChanged(data: PluginChangedPayload) {
+  upsertPlugin(data.plugin)
+}
+
+function onPluginAdded(data: PluginChangedPayload) {
+  upsertPlugin(data.plugin)
+}
+
+function onPluginRemoved(data: PluginChangedPayload) {
+  plugins.value = plugins.value.filter((p) => p.authCode !== data.plugin.authCode)
+}
+
 onMounted(async () => {
+  hub.on(SignalREvents.PluginEnableChanged, onPluginEnableChanged)
+  hub.on(SignalREvents.PluginConnectStatusChanged, onPluginConnectStatusChanged)
+  hub.on(SignalREvents.PluginAdded, onPluginAdded)
+  hub.on(SignalREvents.PluginRemoved, onPluginRemoved)
   await fetchPlugins()
   loading.value = false
+})
+
+onUnmounted(() => {
+  hub.off(SignalREvents.PluginEnableChanged, onPluginEnableChanged)
+  hub.off(SignalREvents.PluginConnectStatusChanged, onPluginConnectStatusChanged)
+  hub.off(SignalREvents.PluginAdded, onPluginAdded)
+  hub.off(SignalREvents.PluginRemoved, onPluginRemoved)
 })
 </script>
 

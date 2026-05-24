@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useAppStore } from '@/stores/app'
+import { useHubStore } from '@/stores/hub'
 import { queryLogs } from '@/api/log'
 import { LogLevel } from '@/models'
-import type { LogDto, LogLevelValue } from '@/models'
+import type { LogDto, LogLevelValue, LogAddedPayload, LogStatusUpdatedPayload } from '@/models'
+import { SignalREvents } from '@/signalr/events'
 
 const app = useAppStore()
+const hub = useHubStore()
 app.setPageTitle('日志')
 
 const items = ref<LogDto[]>([])
@@ -235,21 +238,55 @@ function onPageChange() {
   fetchLogs()
 }
 
+// ── SignalR event handlers ──────────────────────────────────
+
+function matchesFilter(log: LogDto): boolean {
+  if (log.priority < priority.value) return false
+  if (search.value) {
+    const q = search.value.toLowerCase()
+    return (
+      log.detail?.toLowerCase().includes(q) ||
+      log.name?.toLowerCase().includes(q) ||
+      log.source?.toLowerCase().includes(q)
+    )
+  }
+  return true
+}
+
+function onLogAdded(data: LogAddedPayload) {
+  if (!matchesFilter(data.log)) return
+  items.value.push(data.log)
+  totalCount.value += 1
+  totalPage.value = Math.ceil(totalCount.value / pageSize.value) || 1
+  if (autoScroll.value) {
+    nextTick().then(scrollToBottom)
+  }
+}
+
+function onLogStatusUpdated(data: LogStatusUpdatedPayload) {
+  const item = items.value.find((l) => l.id === data.logId)
+  if (item) item.status = data.status
+}
+
 onMounted(async () => {
+  hub.on(SignalREvents.LogAdded, onLogAdded)
+  hub.on(SignalREvents.LogStatusUpdated, onLogStatusUpdated)
   await fetchLogs()
   if (autoScroll.value) {
-    await nextTick()
-    scrollToBottom()
+    // Wait for v-fade-transition mode="out-in" to finish rendering
+    setTimeout(() => scrollToBottom(), 400)
   }
-  // timer = setInterval(fetchLogs, 10000)
 })
 
-//onUnmounted(() => clearInterval(timer))
+onUnmounted(() => {
+  hub.off(SignalREvents.LogAdded, onLogAdded)
+  hub.off(SignalREvents.LogStatusUpdated, onLogStatusUpdated)
+})
 </script>
 
 <template>
   <div>
-    <v-fade-transition>
+    <v-fade-transition mode="out-in">
       <div v-if="firstLoad" class="pa-4">
         <v-skeleton-loader type="card" class="mb-4" />
         <v-skeleton-loader type="table-row@10" class="glass-card pa-4" />

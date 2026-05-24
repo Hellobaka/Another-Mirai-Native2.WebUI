@@ -57,10 +57,12 @@ export const useNotifyStore = defineStore('notify', () => {
     if (idx !== -1) queue.splice(idx, 1)
   }
 
+  function clear() { queue.splice(0) }
+
   function success(message: string) { show(message, 'success') }
   function error(message: string) { show(message, 'error') }
   function warning(message: string) { show(message, 'warning') }
   function info(message: string) { show(message, 'info') }
 
-  return { queue, show, success, error, warning, info, dismiss }
+  return { queue, show, clear, success, error, warning, info, dismiss }
 })

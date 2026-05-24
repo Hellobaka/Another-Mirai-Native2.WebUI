@@ -12,12 +12,19 @@ import type {
   PluginUsageData,
   ProtocolStatusData,
   UsageData,
+  UsageUpdatedPayload,
+  PluginUsageUpdatedPayload,
+  ProtocolStatusPayload,
+  CurrentBotInfoChangedPayload,
 } from '@/models'
 import { useAppStore } from '@/stores/app'
 import { useNotifyStore } from '@/stores/notify'
+import { useHubStore } from '@/stores/hub'
+import { SignalREvents } from '@/signalr/events'
 
 const app = useAppStore()
 const notify = useNotifyStore()
+const hub = useHubStore()
 app.setPageTitle('仪表盘')
 
 const info = ref<DashboardInfoData | null>(null)
@@ -36,7 +43,6 @@ const sortDir = ref<'asc' | 'desc'>('desc')
 const disablingIds: Set<number> = reactive(new Set<number>())
 const reloadingIds: Set<number> = reactive(new Set<number>())
 
-let refreshTimer: ReturnType<typeof setInterval>
 let tickTimer: ReturnType<typeof setInterval>
 
 function parseStartedTime(raw: string): number {
@@ -179,17 +185,55 @@ async function fetchData() {
   }
 }
 
+// ── SignalR event handlers ──────────────────────────────────
+
+function onUsageUpdated(data: UsageUpdatedPayload) {
+  usage.value = data as UsageData
+}
+
+function onPluginUsageUpdated(data: PluginUsageUpdatedPayload) {
+  pluginUsage.value = data
+}
+
+function onProtocolOnline(data: ProtocolStatusPayload) {
+  if (currentProtocol.value) {
+    currentProtocol.value = { name: data.name, isConnected: true }
+  }
+}
+
+function onProtocolOffline(data: ProtocolStatusPayload) {
+  if (currentProtocol.value) {
+    currentProtocol.value = { name: data.name, isConnected: false }
+  }
+}
+
+function onCurrentBotInfoChanged(data: CurrentBotInfoChangedPayload) {
+  if (info.value) {
+    info.value.currentBotQQ = data.qq
+    info.value.currentBotNick = data.nick
+  }
+}
+
 onMounted(() => {
   fetchData()
-  refreshTimer = setInterval(fetchData, 5000)
   tickTimer = setInterval(() => {
     nowTick.value++
   }, 1000)
+
+  hub.on(SignalREvents.UsageUpdated, onUsageUpdated)
+  hub.on(SignalREvents.PluginUsageUpdated, onPluginUsageUpdated)
+  hub.on(SignalREvents.ProtocolOnline, onProtocolOnline)
+  hub.on(SignalREvents.ProtocolOffline, onProtocolOffline)
+  hub.on(SignalREvents.CurrentBotInfoChanged, onCurrentBotInfoChanged)
 })
 
 onUnmounted(() => {
-  clearInterval(refreshTimer)
   clearInterval(tickTimer)
+  hub.off(SignalREvents.UsageUpdated, onUsageUpdated)
+  hub.off(SignalREvents.PluginUsageUpdated, onPluginUsageUpdated)
+  hub.off(SignalREvents.ProtocolOnline, onProtocolOnline)
+  hub.off(SignalREvents.ProtocolOffline, onProtocolOffline)
+  hub.off(SignalREvents.CurrentBotInfoChanged, onCurrentBotInfoChanged)
 })
 </script>
 
