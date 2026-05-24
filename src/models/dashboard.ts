@@ -6,7 +6,7 @@ export interface DashboardInfoData {
   cpu: string
   /** 物理内存总量（MB） */
   totalMemory: number
-  /** 框架运行时长（d:hh:mm:ss） */
+  /** 框架运行时长（DD:HH:MM:SS） */
   startedTime: string
   /** 框架版本号 */
   version: string
@@ -16,6 +16,14 @@ export interface DashboardInfoData {
   currentBotNick: string
   /** 已启用的插件数量 */
   loadedPluginCount: number
+  /** .NET 运行时版本 */
+  dotNetRuntimeVersion: string
+  /** 工作目录 */
+  workingDirectory: string
+  /** 磁盘可用空间（GB） */
+  diskFreeSpaceInGB: number
+  /** 磁盘总空间（GB） */
+  diskTotalSpaceInGB: number
 }
 
 /** 系统资源占用 (GET /api/dashboard/usages) */
@@ -24,8 +32,6 @@ export interface UsageData {
   cpuUsage: number
   /** 内存占用百分比 */
   memoryUsage: number
-  /** CPU 当前频率（MHz） */
-  cpuCurrentFrequency: number
   /** 已用内存（MB） */
   usedMemoryInMB: number
   /** 总内存（MB） */
@@ -38,6 +44,10 @@ export interface PluginUsageData {
   totalProcessMemory: number
   /** 所有进程 CPU 合计（%） */
   totalProcessCPU: number
+  /** 今日已处理消息条数 */
+  processedMessageCount: number
+  /** 今日已发送消息条数 */
+  sentMessageCount: number
   /** 各进程详情 */
   pluginUsages: DashboardPluginItem[]
 }

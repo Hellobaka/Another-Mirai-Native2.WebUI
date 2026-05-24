@@ -145,8 +145,6 @@ const sortedProcessItems = computed(() => {
   })
 })
 
-const runningProcessCount = computed(() => sortedProcessItems.value.filter((p) => p.running).length)
-
 async function fetchData() {
   try {
     const [infoR, usageR, pluginR, protoR] = await Promise.allSettled([
@@ -282,31 +280,33 @@ onUnmounted(() => {
           </v-card>
         </v-col>
 
-        <!-- Today processed (placeholder) -->
+        <!-- Today processed -->
         <v-col cols="12" sm="6" md="4" lg="2">
-          <v-card class="glass-card stat-tile stat-tile--pending" height="100%">
+          <v-card class="glass-card stat-tile" height="100%">
             <div class="tile-head">
               <v-avatar color="info" variant="tonal" rounded="lg" size="36">
                 <v-icon icon="mdi-message-arrow-right-outline" size="18" />
               </v-avatar>
-              <span class="tile-label">今日已处理</span>
+              <span class="tile-label">已处理消息</span>
             </div>
-            <div class="tile-value tile-value--muted mt-3">—</div>
-            <div class="tile-sub">待接入数据</div>
+            <div class="tile-value mt-3">
+              <AnimatedCounter :target="pluginUsage?.processedMessageCount ?? 0" />
+            </div>
           </v-card>
         </v-col>
 
-        <!-- Today sent (placeholder) -->
+        <!-- Today sent -->
         <v-col cols="12" sm="6" md="4" lg="2">
-          <v-card class="glass-card stat-tile stat-tile--pending" height="100%">
+          <v-card class="glass-card stat-tile" height="100%">
             <div class="tile-head">
               <v-avatar color="secondary" variant="tonal" rounded="lg" size="36">
                 <v-icon icon="mdi-send-outline" size="18" />
               </v-avatar>
-              <span class="tile-label">今日已发送</span>
+              <span class="tile-label">已发送消息</span>
             </div>
-            <div class="tile-value tile-value--muted mt-3">—</div>
-            <div class="tile-sub">待接入数据</div>
+            <div class="tile-value mt-3">
+              <AnimatedCounter :target="pluginUsage?.sentMessageCount ?? 0" />
+            </div>
           </v-card>
         </v-col>
 
@@ -320,7 +320,6 @@ onUnmounted(() => {
               <span class="tile-label">框架版本</span>
             </div>
             <div class="tile-value tile-value--mono mt-3">v{{ info.version }}</div>
-            <div class="tile-sub">Another-Mirai-Native2</div>
           </v-card>
         </v-col>
       </v-row>
@@ -347,11 +346,16 @@ onUnmounted(() => {
                   :size="110"
                 />
                 <CpuMemoryRing
-                  :value="0"
+                  :value="
+                    info.diskTotalSpaceInGB > 0
+                      ? ((info.diskTotalSpaceInGB - info.diskFreeSpaceInGB) /
+                          info.diskTotalSpaceInGB) *
+                        100
+                      : 0
+                  "
                   label="磁盘占用"
                   color="#FF9800"
                   :size="110"
-                  :pending="true"
                 />
               </div>
 
@@ -375,9 +379,12 @@ onUnmounted(() => {
                     formatMemory(pluginUsage?.totalProcessMemory ?? 0)
                   }}</span>
                 </div>
-                <div class="resource-metric resource-metric--pending">
+                <div class="resource-metric">
                   <span class="metric-label">磁盘可用 / 总量</span>
-                  <span class="metric-val metric-val--muted">— / —</span>
+                  <span class="metric-val"
+                    >{{ info.diskFreeSpaceInGB.toFixed(1) }} GB /
+                    {{ info.diskTotalSpaceInGB.toFixed(1) }} GB</span
+                  >
                 </div>
               </div>
             </template>
@@ -420,13 +427,13 @@ onUnmounted(() => {
                 </template>
                 <span v-else class="info-val text-medium-emphasis">—</span>
               </div>
-              <div class="info-row info-row--pending">
+              <div class="info-row">
                 <span class="info-label">.NET 运行时</span>
-                <span class="info-val text-medium-emphasis">—</span>
+                <span class="info-val">{{ info.dotNetRuntimeVersion || '—' }}</span>
               </div>
-              <div class="info-row info-row--pending">
-                <span class="info-label">主机名</span>
-                <span class="info-val text-medium-emphasis">—</span>
+              <div class="info-row">
+                <span class="info-label">工作目录</span>
+                <span class="info-val">{{ info.workingDirectory || '—' }}</span>
               </div>
             </div>
           </v-card>
