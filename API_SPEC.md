@@ -91,7 +91,10 @@ GET /api/auth/refresh
 ```jsonc
 {
   "code": 0,
-  "data": { "valid": true },
+  "data": {
+    "token": "eyJhbGciOi...",
+    "expiresAt": "2026-05-22T00:00:00Z",
+  },
 }
 ```
 

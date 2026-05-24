@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 import Login from '@/pages/Login.vue'
 import MainLayout from '@/layouts/MainLayout.vue'
@@ -36,11 +37,18 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
-  if (to.meta.public || localStorage.getItem('amn_token')) {
-    return true
-  }
-  return { name: 'Login' }
+router.beforeEach(async (to) => {
+  const auth = useAuthStore()
+
+  if (to.meta.public) return true
+
+  if (!auth.token) return { name: 'Login' }
+
+  await auth.tryRefreshIfNeeded()
+
+  if (!auth.token) return { name: 'Login' }
+
+  return true
 })
 
 export default router

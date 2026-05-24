@@ -8,5 +8,5 @@ export function login(password: string) {
 }
 
 export function refresh() {
-  return http.get<ApiResponse<{ valid: boolean }>>('/auth/refresh')
+  return http.get<ApiResponse<LoginResponseData>>('/auth/refresh')
 }

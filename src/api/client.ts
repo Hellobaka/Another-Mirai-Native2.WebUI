@@ -20,7 +20,9 @@ http.interceptors.request.use((config) => {
 http.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Skip forced logout for the refresh endpoint — auth store handles that case
+    const isRefreshCall = error.config?.url?.includes('/auth/refresh')
+    if (error.response?.status === 401 && !isRefreshCall) {
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(EXPIRES_KEY)
       window.location.hash = '#/login'
