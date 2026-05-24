@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
 import { useNotifyStore } from '@/stores/notify'
+import { getBaseInformation } from '@/api/dashboard'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -14,6 +15,21 @@ const display = useDisplay()
 
 const isMobile = computed(() => display.smAndDown.value)
 const drawerPermanent = computed(() => !isMobile.value)
+
+const botQQ = ref(0)
+const botNick = ref('')
+
+async function fetchBotInfo() {
+  try {
+    const res = await getBaseInformation()
+    if (res.data.code === 0) {
+      botQQ.value = res.data.data.currentBotQQ
+      botNick.value = res.data.data.currentBotNick
+    }
+  } catch {
+    /* silent */
+  }
+}
 
 const navItems = [
   { title: '仪表盘', icon: 'mdi-view-dashboard', to: '/dashboard' },
@@ -32,6 +48,13 @@ function closeOnMobile() {
   if (isMobile.value) app.drawerOpen = false
 }
 
+const APP_VERSION = '1.0.0'
+// SignalR connection state — always disconnected until hub is wired up
+const hubConnected = ref(false)
+
+onMounted(() => {
+  fetchBotInfo()
+})
 </script>
 
 <template>
@@ -42,15 +65,24 @@ function closeOnMobile() {
       :permanent="drawerPermanent"
       elevation="0"
     >
-      <v-list-item
-        class="pa-4"
-        title="AMN2"
-        subtitle="管理面板"
-        prepend-avatar="mdi-robot"
-        nav
-        @click="router.push('/dashboard')"
-        style="cursor: pointer"
-      />
+      <v-list-item class="pa-4" nav @click="router.push('/dashboard')" style="cursor: pointer">
+        <template #prepend>
+          <v-avatar size="40">
+            <v-img
+              v-if="botQQ > 0"
+              :src="`https://q.qlogo.cn/g?b=qq&nk=${botQQ}&s=160`"
+              :alt="botNick"
+            />
+            <v-icon v-else icon="mdi-robot" size="24" />
+          </v-avatar>
+        </template>
+        <v-list-item-title class="font-weight-bold">
+          {{ botNick || 'AMN2' }}
+        </v-list-item-title>
+        <v-list-item-subtitle class="text-caption">
+          {{ botQQ > 0 ? botQQ : '管理面板' }}
+        </v-list-item-subtitle>
+      </v-list-item>
 
       <v-divider class="mx-3" />
 
@@ -70,14 +102,8 @@ function closeOnMobile() {
 
     <v-app-bar class="glass-card" elevation="0" density="compact">
       <template #prepend>
-        <v-app-bar-nav-icon
-          v-if="isMobile"
-          @click="app.toggleDrawer()"
-        />
-        <v-app-bar-nav-icon
-          v-else
-          @click="app.toggleRail()"
-        />
+        <v-app-bar-nav-icon v-if="isMobile" @click="app.toggleDrawer()" />
+        <v-app-bar-nav-icon v-else @click="app.toggleRail()" />
       </template>
       <v-app-bar-title>{{ app.pageTitle }}</v-app-bar-title>
 
@@ -88,16 +114,11 @@ function closeOnMobile() {
           size="small"
           @click="app.toggleTheme()"
         />
-        <v-btn
-          icon="mdi-logout"
-          variant="text"
-          size="small"
-          @click="logout"
-        />
+        <v-btn icon="mdi-logout" variant="text" size="small" @click="logout" />
       </template>
     </v-app-bar>
 
-    <v-main :style="{ paddingLeft: app.rail ? '56px' : '256px' }">
+    <v-main style="padding-bottom: 40px">
       <v-container fluid class="pa-4">
         <router-view v-slot="{ Component }">
           <transition name="page" mode="out-in">
@@ -106,6 +127,29 @@ function closeOnMobile() {
         </router-view>
       </v-container>
     </v-main>
+
+    <v-footer class="footer-bar" elevation="0" height="40">
+      <div class="footer-inner">
+        <span class="status-dot" :class="hubConnected ? 'status-dot--on' : 'status-dot--off'" />
+        <span class="footer-label ml-2">
+          实时推送服务:
+          <span :class="hubConnected ? 'text-success' : 'text-error'">
+            {{ hubConnected ? '已连接' : '已断开' }}
+          </span>
+        </span>
+        <div class="footer-divider" />
+        <a
+          href="https://github.com/Hellobaka/Another-Mirai-Native2.WebUI"
+          target="_blank"
+          rel="noopener"
+          class="footer-link"
+        >
+          <v-icon icon="mdi-github" size="14" class="mr-1" />GitHub
+        </a>
+        <span class="footer-dot">·</span>
+        <span class="footer-label">WebUI v{{ APP_VERSION }}</span>
+      </div>
+    </v-footer>
 
     <!-- Stacked snackbar container -->
     <div class="snackbar-stack">
@@ -118,10 +162,27 @@ function closeOnMobile() {
           variant="elevated"
         >
           <div class="d-flex align-center">
-            <v-icon :icon="n.severity === 'success' ? 'mdi-check-circle' : n.severity === 'error' ? 'mdi-alert-circle' : n.severity === 'warning' ? 'mdi-alert' : 'mdi-information'"
-              class="mr-2" size="20" />
+            <v-icon
+              :icon="
+                n.severity === 'success'
+                  ? 'mdi-check-circle'
+                  : n.severity === 'error'
+                    ? 'mdi-alert-circle'
+                    : n.severity === 'warning'
+                      ? 'mdi-alert'
+                      : 'mdi-information'
+              "
+              class="mr-2"
+              size="20"
+            />
             <span class="text-body-2 flex-grow-1">{{ n.message }}</span>
-            <v-btn variant="text" icon="mdi-close" size="x-small" density="compact" @click="notify.dismiss(n.id)" />
+            <v-btn
+              variant="text"
+              icon="mdi-close"
+              size="x-small"
+              density="compact"
+              @click="notify.dismiss(n.id)"
+            />
           </div>
           <v-progress-linear
             v-if="!n.persistent"
@@ -151,5 +212,75 @@ function closeOnMobile() {
 .snackbar-item {
   min-width: 300px;
   backdrop-filter: blur(12px);
+}
+
+/* ── Footer ── */
+.footer-bar {
+  position: fixed !important;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: rgba(var(--v-theme-surface), 0.88) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(var(--v-theme-on-surface), 0.08) !important;
+}
+
+.footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0 4px;
+}
+
+.footer-label {
+  font-size: 0.75rem;
+  color: rgba(var(--v-theme-on-surface), 0.56);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot--on {
+  background: rgb(var(--v-theme-success));
+  box-shadow: 0 0 0 3px rgba(var(--v-theme-success), 0.2);
+}
+
+.status-dot--off {
+  background: rgb(var(--v-theme-error));
+  box-shadow: 0 0 0 3px rgba(var(--v-theme-error), 0.2);
+}
+
+.footer-divider {
+  width: 1px;
+  height: 14px;
+  background: rgba(var(--v-theme-on-surface), 0.18);
+  margin: 0 12px;
+  flex-shrink: 0;
+}
+
+.footer-dot {
+  margin: 0 6px;
+  font-size: 0.75rem;
+  color: rgba(var(--v-theme-on-surface), 0.28);
+}
+
+.footer-link {
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  color: rgba(var(--v-theme-on-surface), 0.56);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-link:hover {
+  color: rgb(var(--v-theme-primary));
 }
 </style>
