@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useAppStore } from '@/stores/app'
 import { queryLogs } from '@/api/log'
 import { LogLevel } from '@/models'
@@ -76,9 +76,6 @@ const ascending = ref(false)
 const levelOptions = [
   { title: 'Debug', value: LogLevel.Debug },
   { title: 'Info', value: LogLevel.Info },
-  { title: 'Info (Success)', value: LogLevel.InfoSuccess },
-  { title: 'Info (Receive)', value: LogLevel.InfoReceive },
-  { title: 'Info (Send)', value: LogLevel.InfoSend },
   { title: 'Warning', value: LogLevel.Warning },
   { title: 'Error', value: LogLevel.Error },
   { title: 'Fatal', value: LogLevel.Fatal },
@@ -205,8 +202,6 @@ function resetColumnWidth(key: string) {
   saveWidths({ ...columnWidths })
 }
 
-let timer: ReturnType<typeof setInterval>
-
 async function fetchLogs() {
   loading.value = true
   try {
@@ -215,7 +210,6 @@ async function fetchLogs() {
       pageIndex: pageIndex.value,
       pageSize: pageSize.value,
       search: search.value || undefined,
-      asc: ascending.value,
     })
     if (res.data.code === 0) {
       items.value = res.data.data.items
@@ -247,10 +241,10 @@ onMounted(async () => {
     await nextTick()
     scrollToBottom()
   }
-  timer = setInterval(fetchLogs, 10000)
+  // timer = setInterval(fetchLogs, 10000)
 })
 
-onUnmounted(() => clearInterval(timer))
+//onUnmounted(() => clearInterval(timer))
 </script>
 
 <template>
@@ -267,7 +261,7 @@ onUnmounted(() => clearInterval(timer))
             <v-select
               v-model="priority"
               :items="levelOptions"
-              label="最低等级"
+              label="日志等级"
               variant="outlined"
               density="compact"
               hide-details
@@ -285,13 +279,6 @@ onUnmounted(() => clearInterval(timer))
               style="max-width: 240px"
               @keyup.enter="onFilterChange()"
               @click:clear="onFilterChange()"
-            />
-            <v-switch
-              v-model="ascending"
-              label="升序"
-              density="compact"
-              hide-details
-              @update:model-value="onFilterChange()"
             />
             <v-spacer />
             <v-switch
@@ -317,7 +304,7 @@ onUnmounted(() => clearInterval(timer))
             :row-props="getRowProps"
             item-key="id"
             density="compact"
-            height="calc(100vh - 260px)"
+            height="calc(100vh - 300px)"
             fixed-header
             hover
           >
