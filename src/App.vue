@@ -5,7 +5,7 @@ const app = useAppStore()
 </script>
 
 <template>
-  <v-app :theme="app.themeMode">
+  <v-app :theme="app.effectiveTheme">
     <router-view v-slot="{ Component }">
       <transition name="page" mode="out-in">
         <component :is="Component" />

@@ -121,12 +121,12 @@ onMounted(() => {
       <v-app-bar-title>{{ app.pageTitle }}</v-app-bar-title>
 
       <template #append>
-        <v-btn
-          :icon="app.themeMode === 'dark' ? 'mdi-weather-sunny' : 'mdi-weather-night'"
-          variant="text"
-          size="small"
-          @click="app.toggleTheme()"
-        />
+        <v-btn icon variant="text" size="small" @click="app.toggleTheme()">
+          <v-icon :icon="app.themeMode === 'dark' ? 'mdi-weather-night' : app.themeMode === 'light' ? 'mdi-weather-sunny' : 'mdi-theme-light-dark'" />
+          <v-tooltip activator="parent" location="bottom">
+            {{ app.themeMode === 'dark' ? '深色' : app.themeMode === 'light' ? '浅色' : '跟随系统' }}
+          </v-tooltip>
+        </v-btn>
         <v-btn icon="mdi-logout" variant="text" size="small" @click="logout" />
       </template>
     </v-app-bar>
