@@ -128,6 +128,10 @@ GET /api/dashboard/base-information
     "currentBotQQ": 10001,
     "currentBotNick": "",
     "loadedPluginCount": 0,
+    "dotNetRuntimeVersion": ".NET 9.0.12",
+    "workingDirectory": "D:\\Code\\Another-Mirai-Native2",
+    "diskFreeSpaceInGB": 1024.11,
+    "diskTotalSpaceInGB": 2048.22,
   },
   "message": null,
 }
@@ -147,7 +151,6 @@ GET /api/dashboard/usages
   "data": {
     "cpuUsage": 20.830696,
     "memoryUsage": 85.56701030927834,
-    "cpuCurrentFrequency": 3096.049072265625,
     "usedMemoryInMB": 13031,
     "totalMemoryInMB": 15229,
   },
@@ -169,6 +172,8 @@ GET /api/dashboard/plugin-usages
   "data": {
     "totalProcessMemory": 42.65625,
     "totalProcessCPU": 0.5207086756763764,
+    "processedMessageCount": 111,
+    "sentMessageCount": 22,
     "pluginUsages": [
       {
         "id": 0,
