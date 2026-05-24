@@ -20,11 +20,45 @@ const coreSaveLoading = ref<Record<string, boolean>>({})
 
 const configSections = [
   { title: '连接', icon: 'mdi-connection', keys: ['AutoConnect', 'AutoProtocol', 'ReconnectTime'] },
-  { title: '插件', icon: 'mdi-puzzle', keys: ['PluginExitWhenCoreExit', 'RestartPluginIfDead', 'HeartBeatInterval', 'PluginInvokeTimeout', 'LoadTimeout'] },
+  {
+    title: '插件',
+    icon: 'mdi-puzzle',
+    keys: [
+      'PluginExitWhenCoreExit',
+      'RestartPluginIfDead',
+      'HeartBeatInterval',
+      'PluginInvokeTimeout',
+      'LoadTimeout',
+    ],
+  },
   { title: '数据', icon: 'mdi-database', keys: ['UseDatabase', 'MessageCacheSize'] },
-  { title: '图片缓存', icon: 'mdi-image', keys: ['EnableChatImageCacheMaxSizeControl', 'MaxChatImageCacheFolderSize', 'EnableChatImageCacheExpireTimeControl', 'ChatImageCacheExpireTime'] },
+  {
+    title: '图片缓存',
+    icon: 'mdi-image',
+    keys: [
+      'EnableChatImageCacheMaxSizeControl',
+      'MaxChatImageCacheFolderSize',
+      'EnableChatImageCacheExpireTimeControl',
+      'ChatImageCacheExpireTime',
+    ],
+  },
   { title: '调试', icon: 'mdi-bug', keys: ['DebugMode'] },
-  { title: '离线操作', icon: 'mdi-cloud-off', keys: ['ActionAfterOfflineSeconds', 'OfflineActionSendEmail', 'OfflineActionEmail_SMTPServer', 'OfflineActionEmail_SMTPPort', 'OfflineActionEmail_SMTPUsername', 'OfflineActionEmail_SMTPPassport', 'OfflineActionEmail_SMTPSenderEmail', 'OfflineActionEmail_SMTPReceiveEmail', 'OfflineActionRunCommand', 'OfflineActionCommands'] },
+  {
+    title: '离线操作',
+    icon: 'mdi-cloud-off',
+    keys: [
+      'ActionAfterOfflineSeconds',
+      'OfflineActionSendEmail',
+      'OfflineActionEmail_SMTPServer',
+      'OfflineActionEmail_SMTPPort',
+      'OfflineActionEmail_SMTPUsername',
+      'OfflineActionEmail_SMTPPassport',
+      'OfflineActionEmail_SMTPSenderEmail',
+      'OfflineActionEmail_SMTPReceiveEmail',
+      'OfflineActionRunCommand',
+      'OfflineActionCommands',
+    ],
+  },
 ]
 
 function sectionItems(keys: string[]) {
@@ -97,9 +131,14 @@ async function commitField(key: string) {
 
 async function doSave(key: string, value: unknown) {
   coreSaveLoading.value[key] = true
-  try { await setCoreConfig(key, value); notify.success('已保存') }
-  catch (e) { notify.error(getErrorMessage(e, '保存失败')) }
-  finally { coreSaveLoading.value[key] = false }
+  try {
+    await setCoreConfig(key, value)
+    notify.success('已保存')
+  } catch (e) {
+    notify.error(getErrorMessage(e, '保存失败'))
+  } finally {
+    coreSaveLoading.value[key] = false
+  }
   delete originals.value[key]
 }
 
@@ -122,6 +161,38 @@ const protocolTab = ref('')
 const protocolConfigs = ref<Record<string, Record<string, GetConfigResponseItem>>>({})
 const protocolLoading = ref(false)
 const protocolSaveLoading = ref<Record<string, boolean>>({})
+const protocolOriginals = ref<Record<string, unknown>>({})
+
+function protoKey(name: string, key: string) {
+  return `${name}.${key}`
+}
+
+function cacheProtocolOriginal(name: string, key: string) {
+  const fk = protoKey(name, key)
+  const item = protocolConfigs.value[name]?.[key]
+  if (item && protocolOriginals.value[fk] === undefined) {
+    protocolOriginals.value[fk] = item.value
+  }
+}
+
+function updateProtocolDraft(name: string, key: string, value: unknown) {
+  if (protocolConfigs.value[name]) {
+    protocolConfigs.value[name][key] = { ...protocolConfigs.value[name][key], value }
+  }
+}
+
+async function commitProtocolField(name: string, key: string) {
+  const fk = protoKey(name, key)
+  const item = protocolConfigs.value[name]?.[key]
+  if (!item) return
+  const original = protocolOriginals.value[fk]
+  if (original !== undefined && String(item.value) === String(original)) {
+    delete protocolOriginals.value[fk]
+    return
+  }
+  delete protocolOriginals.value[fk]
+  await saveProtocolItem(name, key, item.value)
+}
 
 async function fetchProtocolList() {
   try {
@@ -133,7 +204,9 @@ async function fetchProtocolList() {
         fetchOneConfig(res.data.data[0])
       }
     }
-  } catch { /* */ }
+  } catch {
+    /* */
+  }
 }
 
 async function fetchOneConfig(name: string) {
@@ -141,7 +214,9 @@ async function fetchOneConfig(name: string) {
   try {
     const res = await getProtocolConfig(name)
     if (res.data.code === 0) protocolConfigs.value[name] = res.data.data
-  } finally { protocolLoading.value = false }
+  } finally {
+    protocolLoading.value = false
+  }
 }
 
 function onProtocolTabChange(name: string) {
@@ -154,11 +229,17 @@ async function saveProtocolItem(protocolName: string, key: string, value: unknow
   try {
     await setProtocolConfig(protocolName, key, value)
     if (protocolConfigs.value[protocolName]) {
-      protocolConfigs.value[protocolName][key] = { ...protocolConfigs.value[protocolName][key], value }
+      protocolConfigs.value[protocolName][key] = {
+        ...protocolConfigs.value[protocolName][key],
+        value,
+      }
     }
     notify.success('已保存')
-  } catch (e) { notify.error(getErrorMessage(e, '保存失败')) }
-  finally { protocolSaveLoading.value[saveKey] = false }
+  } catch (e) {
+    notify.error(getErrorMessage(e, '保存失败'))
+  } finally {
+    protocolSaveLoading.value[saveKey] = false
+  }
 }
 
 // --- Section nav + scroll spy ---
@@ -209,17 +290,30 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
 <template>
   <div>
     <!-- Sticky: main tabs + section nav -->
-    <div style="position: sticky; top: 0; z-index: 20; background: rgb(var(--v-theme-background)); padding-bottom: 12px;">
+    <div
+      style="
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: rgb(var(--v-theme-background));
+        padding-bottom: 12px;
+      "
+    >
       <div class="pt-1">
         <v-tabs v-model="tab" color="primary">
           <v-tab value="core" prepend-icon="mdi-cog">核心配置</v-tab>
           <v-tab value="protocol" prepend-icon="mdi-power-plug">协议管理</v-tab>
         </v-tabs>
       </div>
-      <div v-show="tab === 'core'" style="max-width: 720px; margin: 0 auto;">
-        <v-card class="glass-card" style="margin-bottom: 12px;">
+      <div v-show="tab === 'core'" style="max-width: 720px; margin: 0 auto">
+        <v-card class="glass-card" style="margin-bottom: 12px">
           <v-tabs v-model="sectionTab" color="primary" density="compact" grow>
-            <v-tab v-for="s in configSections" :key="s.title" :value="s.title" @click="scrollToSection(s.title)">
+            <v-tab
+              v-for="s in configSections"
+              :key="s.title"
+              :value="s.title"
+              @click="scrollToSection(s.title)"
+            >
               <v-icon :icon="s.icon" size="small" class="mr-1" />
               {{ s.title }}
             </v-tab>
@@ -234,7 +328,7 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
         <v-col v-for="section in configSections" :key="section.title" cols="12">
           <v-card
             class="glass-card mb-4 section-card"
-            style="max-width: 720px; margin: 0 auto 16px auto;"
+            style="max-width: 720px; margin: 0 auto 16px auto"
             :ref="(el: unknown) => setSectionRef(section.title, el)"
           >
             <v-card-title class="d-flex align-center pa-4">
@@ -242,22 +336,53 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
               <span class="text-body-1">{{ section.title }}</span>
             </v-card-title>
             <v-card-text class="pt-0">
-              <div v-for="[key, item] in sectionItems(section.keys)" :key="key" class="d-flex align-center py-2 config-row">
+              <div
+                v-for="[key, item] in sectionItems(section.keys)"
+                :key="key"
+                class="d-flex align-center py-2 config-row"
+              >
                 <div class="flex-grow-1 mr-3">
                   <div class="text-body-2">{{ item.title }}</div>
-                  <div v-if="item.description" class="text-caption text-medium-emphasis">{{ item.description }}</div>
+                  <div v-if="item.description" class="text-caption text-medium-emphasis">
+                    {{ item.description }}
+                  </div>
                 </div>
                 <div class="config-control">
-                  <v-switch v-if="item.type === 'Boolean'" :model-value="item.value as boolean" color="primary" hide-details density="compact" :loading="coreSaveLoading[key]"
-                    @update:model-value="async (v: boolean) => { await saveCoreConfig(key, v); coreConfig[key] = { ...coreConfig[key], value: v } }" />
-                  <template v-else-if="item.type === 'Int32' || item.type === 'Int64' || item.type === 'UInt16'">
+                  <v-switch
+                    v-if="item.type === 'Boolean'"
+                    :model-value="item.value as boolean"
+                    color="primary"
+                    hide-details
+                    density="compact"
+                    :loading="coreSaveLoading[key]"
+                    @update:model-value="
+                      async (v: boolean | null) => {
+                        if (v === null) return
+                        await saveCoreConfig(key, v)
+                        coreConfig[key] = { ...coreConfig[key], value: v }
+                      }
+                    "
+                  />
+                  <template
+                    v-else-if="
+                      item.type === 'Int32' || item.type === 'Int64' || item.type === 'UInt16'
+                    "
+                  >
                     <div>
-                      <v-text-field :model-value="String(item.value)" type="number" variant="outlined" density="compact"
-                        hide-details style="width: 120px" :loading="coreSaveLoading[key]"
+                      <v-text-field
+                        :model-value="String(item.value)"
+                        type="number"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                        style="width: 250px"
+                        :loading="coreSaveLoading[key]"
                         :error-messages="fieldErrors[key] || ''"
                         @focus="cacheOriginal(key)"
                         @update:model-value="(v: string) => updateDraft(key, Number(v))"
-                        @blur="commitField(key)" />
+                        @blur="commitField(key)"
+                        @keyup.enter="($event.target as HTMLElement).blur()"
+                      />
                     </div>
                   </template>
                   <template v-else-if="item.type === 'List`1'">
@@ -272,15 +397,28 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
                           <v-card-title class="text-body-1 d-flex align-center pa-0 mb-3">
                             {{ item.title }}
                             <v-spacer />
-                            <v-btn icon="mdi-close" variant="text" size="small" @click="isActive.value = false" />
+                            <v-btn
+                              icon="mdi-close"
+                              variant="text"
+                              size="small"
+                              @click="isActive.value = false"
+                            />
                           </v-card-title>
                           <v-card-text class="pa-0">
-                            <div v-if="(item.value as string[]).length === 0" class="text-caption text-medium-emphasis py-2">
+                            <div
+                              v-if="(item.value as string[]).length === 0"
+                              class="text-caption text-medium-emphasis py-2"
+                            >
                               列表为空
                             </div>
-                            <v-list v-else density="compact" class="mb-3 bg-transparent" lines="one">
+                            <v-list
+                              v-else
+                              density="compact"
+                              class="mb-3 bg-transparent"
+                              lines="one"
+                            >
                               <v-list-item
-                                v-for="(entry, idx) in (item.value as string[])"
+                                v-for="(entry, idx) in item.value as string[]"
                                 :key="idx"
                                 :title="entry"
                                 density="compact"
@@ -292,12 +430,14 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
                                     size="x-small"
                                     color="error"
                                     :loading="coreSaveLoading[key]"
-                                    @click="async () => {
-                                      const arr = [...(item.value as string[])]
-                                      arr.splice(idx, 1)
-                                      await saveCoreConfig(key, arr)
-                                      coreConfig[key] = { ...coreConfig[key], value: arr }
-                                    }"
+                                    @click="
+                                      async () => {
+                                        const arr = [...(item.value as string[])]
+                                        arr.splice(idx, 1)
+                                        await saveCoreConfig(key, arr)
+                                        coreConfig[key] = { ...coreConfig[key], value: arr }
+                                      }
+                                    "
                                   />
                                 </template>
                               </v-list-item>
@@ -309,54 +449,67 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
                                 variant="outlined"
                                 density="compact"
                                 hide-details
-                                @keyup.enter="async () => {
-                                  const val = listDrafts[key]?.trim()
-                                  if (!val) return
-                                  const arr = (item.value as string[]) || []
-                                  if (arr.includes(val)) {
-                                    listErrors[key] = '该项已存在'
-                                    return
+                                @keyup.enter="
+                                  async () => {
+                                    const val = listDrafts[key]?.trim()
+                                    if (!val) return
+                                    const arr = (item.value as string[]) || []
+                                    if (arr.includes(val)) {
+                                      listErrors[key] = '该项已存在'
+                                      return
+                                    }
+                                    listErrors[key] = ''
+                                    await saveCoreConfig(key, [...arr, val])
+                                    coreConfig[key] = { ...coreConfig[key], value: [...arr, val] }
+                                    listDrafts[key] = ''
                                   }
-                                  listErrors[key] = ''
-                                  await saveCoreConfig(key, [...arr, val])
-                                  coreConfig[key] = { ...coreConfig[key], value: [...arr, val] }
-                                  listDrafts[key] = ''
-                                }"
+                                "
                               />
                               <v-btn
                                 variant="tonal"
                                 color="primary"
                                 :loading="coreSaveLoading[key]"
-                                @click="async () => {
-                                  const val = listDrafts[key]?.trim()
-                                  if (!val) return
-                                  const arr = (item.value as string[]) || []
-                                  if (arr.includes(val)) {
-                                    listErrors[key] = '该项已存在'
-                                    return
+                                @click="
+                                  async () => {
+                                    const val = listDrafts[key]?.trim()
+                                    if (!val) return
+                                    const arr = (item.value as string[]) || []
+                                    if (arr.includes(val)) {
+                                      listErrors[key] = '该项已存在'
+                                      return
+                                    }
+                                    listErrors[key] = ''
+                                    await saveCoreConfig(key, [...arr, val])
+                                    coreConfig[key] = { ...coreConfig[key], value: [...arr, val] }
+                                    listDrafts[key] = ''
                                   }
-                                  listErrors[key] = ''
-                                  await saveCoreConfig(key, [...arr, val])
-                                  coreConfig[key] = { ...coreConfig[key], value: [...arr, val] }
-                                  listDrafts[key] = ''
-                                }"
+                                "
                               >
                                 添加
                               </v-btn>
                             </div>
-                            <div v-if="listErrors[key]" class="text-caption text-error mt-1">{{ listErrors[key] }}</div>
+                            <div v-if="listErrors[key]" class="text-caption text-error mt-1">
+                              {{ listErrors[key] }}
+                            </div>
                           </v-card-text>
                         </v-card>
                       </template>
                     </v-dialog>
                   </template>
                   <div v-else>
-                    <v-text-field :model-value="String(item.value ?? '')" variant="outlined" density="compact"
-                      hide-details style="width: 180px" :loading="coreSaveLoading[key]"
+                    <v-text-field
+                      :model-value="String(item.value ?? '')"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      style="width: 250px"
+                      :loading="coreSaveLoading[key]"
                       :error-messages="fieldErrors[key] || ''"
                       @focus="cacheOriginal(key)"
                       @update:model-value="(v: string) => updateDraft(key, v)"
-                      @blur="commitField(key)" />
+                      @blur="commitField(key)"
+                      @keyup.enter="($event.target as HTMLElement).blur()"
+                    />
                   </div>
                 </div>
               </div>
@@ -369,39 +522,89 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
 
     <!-- ========== Protocol ========== -->
     <div v-show="tab === 'protocol'">
-      <v-card class="glass-card" style="max-width: 720px; margin: 0 auto 16px auto;">
+      <v-card class="glass-card" style="max-width: 720px; margin: 0 auto 16px auto">
         <v-card-text>
           <v-tabs v-model="protocolTab" color="primary" @update:model-value="onProtocolTabChange">
             <v-tab v-for="name in protocolList" :key="name" :value="name">{{ name }}</v-tab>
           </v-tabs>
           <v-divider class="mb-4" />
-          <v-tabs-window v-model="protocolTab" style="overflow: visible;">
+          <v-tabs-window v-model="protocolTab" style="overflow: visible">
             <v-tabs-window-item
               v-for="name in protocolList"
               :key="name"
               :value="name"
-              style="overflow: visible;"
+              style="overflow: visible"
             >
               <v-skeleton-loader v-if="protocolLoading" type="list-item@4" />
               <div v-else-if="protocolConfigs[name]">
-                <div v-for="(item, key) in protocolConfigs[name]" :key="key" class="config-row d-flex align-center py-3">
+                <div
+                  v-for="(item, key) in protocolConfigs[name]"
+                  :key="key"
+                  class="config-row d-flex align-center py-3"
+                >
                   <div class="flex-grow-1 mr-3">
                     <div class="text-body-2">{{ item.title }}</div>
-                    <div v-if="item.description" class="text-caption text-medium-emphasis">{{ item.description }}</div>
+                    <div v-if="item.description" class="text-caption text-medium-emphasis">
+                      {{ item.description }}
+                    </div>
                   </div>
                   <div class="d-flex align-center">
-                    <v-switch v-if="item.type === 'Boolean'" :model-value="item.value as boolean" color="primary" hide-details density="compact" :loading="protocolSaveLoading[`${name}.${key}`]"
-                      @update:model-value="(v: boolean) => saveProtocolItem(name, key, v)" />
-                    <template v-else-if="item.type === 'Int32' || item.type === 'Int64' || item.type === 'UInt16'">
-                      <v-text-field :model-value="String(item.value)" type="number" variant="outlined" density="compact" hide-details style="width: 140px" :loading="protocolSaveLoading[`${name}.${key}`]"
-                        @update:model-value="(v: string) => { const n = Number(v); if (!isNaN(n)) saveProtocolItem(name, key, n) }" />
+                    <v-switch
+                      v-if="item.type === 'Boolean'"
+                      :model-value="item.value as boolean"
+                      color="primary"
+                      hide-details
+                      density="compact"
+                      :loading="protocolSaveLoading[`${name}.${key}`]"
+                      @update:model-value="
+                        (v: boolean | null) => {
+                          if (v !== null) saveProtocolItem(name, key, v)
+                        }
+                      "
+                    />
+                    <template
+                      v-else-if="
+                        item.type === 'Int32' || item.type === 'Int64' || item.type === 'UInt16'
+                      "
+                    >
+                      <v-text-field
+                        :model-value="String(item.value)"
+                        type="number"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                        style="width: 250px"
+                        :loading="protocolSaveLoading[`${name}.${key}`]"
+                        @focus="cacheProtocolOriginal(name, key)"
+                        @update:model-value="
+                          (v: string) => {
+                            const n = Number(v)
+                            if (!isNaN(n)) updateProtocolDraft(name, key, n)
+                          }
+                        "
+                        @blur="commitProtocolField(name, key)"
+                        @keyup.enter="($event.target as HTMLElement).blur()"
+                      />
                     </template>
-                    <v-text-field v-else :model-value="String(item.value ?? '')" variant="outlined" density="compact" hide-details style="width: 240px" :loading="protocolSaveLoading[`${name}.${key}`]"
-                      @update:model-value="(v: string) => saveProtocolItem(name, key, v)" />
+                    <v-text-field
+                      v-else
+                      :model-value="String(item.value ?? '')"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      style="width: 250px"
+                      :loading="protocolSaveLoading[`${name}.${key}`]"
+                      @focus="cacheProtocolOriginal(name, key)"
+                      @update:model-value="(v: string) => updateProtocolDraft(name, key, v)"
+                      @blur="commitProtocolField(name, key)"
+                      @keyup.enter="($event.target as HTMLElement).blur()"
+                    />
                   </div>
                 </div>
               </div>
-              <div v-else class="text-caption text-medium-emphasis text-center py-6">加载配置失败</div>
+              <div v-else class="text-caption text-medium-emphasis text-center py-6">
+                加载配置失败
+              </div>
             </v-tabs-window-item>
           </v-tabs-window>
         </v-card-text>
@@ -411,14 +614,29 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
 </template>
 
 <style scoped>
-.config-row { border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.05); padding: 12px 6px; }
-.config-row:last-child { border-bottom: none; }
-.config-control { display: flex; align-items: center; flex-shrink: 0; }
-.section-card { scroll-margin-top: 100px; }
+.config-row {
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.05);
+  padding: 12px 6px;
+}
+.config-row:last-child {
+  border-bottom: none;
+}
+.config-control {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.section-card {
+  scroll-margin-top: 100px;
+}
 
 /* Prevent v-tabs-window from clipping protocol config controls */
-:deep(.v-tabs-window) { overflow: visible !important; }
-:deep(.v-tabs-window__container) { overflow: visible !important; }
+:deep(.v-tabs-window) {
+  overflow: visible !important;
+}
+:deep(.v-tabs-window__container) {
+  overflow: visible !important;
+}
 </style>
 
 <style>
@@ -435,4 +653,3 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
   container-type: normal !important;
 }
 </style>
-
