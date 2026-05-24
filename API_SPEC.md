@@ -26,15 +26,18 @@
   - `pageSize`: 每页条数，默认 20，最大 100
 
 - **分页响应:**
+
 ```jsonc
 {
   "code": 0,
   "data": {
-    "items": [ /* ... */ ],
+    "items": [
+      /* ... */
+    ],
     "total": 150,
     "page": 1,
-    "pageSize": 20
-  }
+    "pageSize": 20,
+  },
 }
 ```
 
@@ -49,28 +52,31 @@ POST /api/auth/login
 ```
 
 **Request:**
+
 ```jsonc
 {
-  "password": "string"
+  "password": "string",
 }
 ```
 
 **Response (成功):**
+
 ```jsonc
 {
   "code": 0,
   "data": {
     "token": "eyJhbGciOi...",
-    "expiresAt": "2026-05-22T00:00:00Z"
-  }
+    "expiresAt": "2026-05-22T00:00:00Z",
+  },
 }
 ```
 
 **Response (失败):**
+
 ```jsonc
 {
   "code": 401,
-  "message": "密码错误"
+  "message": "密码错误",
 }
 ```
 
@@ -81,18 +87,20 @@ GET /api/auth/refresh
 ```
 
 **Response:**
+
 ```jsonc
 {
   "code": 0,
-  "data": { "valid": true }
+  "data": { "valid": true },
 }
 ```
 
 **Response (失败):**
+
 ```jsonc
 {
   "code": 401,
-  "message": "未登录或登录失效"
+  "message": "未登录或登录失效",
 }
 ```
 
@@ -107,6 +115,7 @@ GET /api/dashboard/base-information
 ```
 
 **Response:**
+
 ```jsonc
 {
   "code": 0,
@@ -118,9 +127,9 @@ GET /api/dashboard/base-information
     "version": "2.12.1.0",
     "currentBotQQ": 10001,
     "currentBotNick": "",
-    "loadedPluginCount": 0
+    "loadedPluginCount": 0,
   },
-  "message": null
+  "message": null,
 }
 ```
 
@@ -131,6 +140,7 @@ GET /api/dashboard/usages
 ```
 
 **Response:**
+
 ```jsonc
 {
   "code": 0,
@@ -139,9 +149,9 @@ GET /api/dashboard/usages
     "memoryUsage": 85.56701030927834,
     "cpuCurrentFrequency": 3096.049072265625,
     "usedMemoryInMB": 13031,
-    "totalMemoryInMB": 15229
+    "totalMemoryInMB": 15229,
   },
-  "message": null
+  "message": null,
 }
 ```
 
@@ -152,6 +162,7 @@ GET /api/dashboard/plugin-usages
 ```
 
 **Response:**
+
 ```jsonc
 {
   "code": 0,
@@ -165,11 +176,11 @@ GET /api/dashboard/plugin-usages
         "pluginName": "主框架",
         "running": true,
         "cpuUsage": 0.5207086756763764,
-        "memoryUsage": 42.65625
-      }
-    ]
+        "memoryUsage": 42.65625,
+      },
+    ],
   },
-  "message": null
+  "message": null,
 }
 ```
 
@@ -186,6 +197,7 @@ GET /api/plugin
 ```
 
 **Response:**
+
 ```jsonc
 {
   "code": 0,
@@ -198,10 +210,7 @@ GET /api/plugin
       "author": "落花茗",
       "description": "R!",
       "version": "1.1.3",
-      "auth": [
-        101,
-        106
-      ]
+      "auth": [101, 106],
     },
     {
       "authCode": 10002,
@@ -211,11 +220,7 @@ GET /api/plugin
       "author": "落花茗",
       "description": "玩啥呢 不叫我",
       "version": "1.0.0",
-      "auth": [
-        101,
-        106,
-        161
-      ]
+      "auth": [101, 106, 161],
     },
     {
       "authCode": 10003,
@@ -226,35 +231,12 @@ GET /api/plugin
       "description": "R!!",
       "version": "2.0.0",
       "auth": [
-        20,
-        30,
-        101,
-        103,
-        106,
-        110,
-        120,
-        121,
-        122,
-        123,
-        124,
-        125,
-        126,
-        127,
-        128,
-        130,
-        131,
-        132,
-        140,
-        150,
-        151,
-        160,
-        161,
-        162,
-        180
-      ]
-    }
+        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
+        150, 151, 160, 161, 162, 180,
+      ],
+    },
   ],
-  "message": null
+  "message": null,
 }
 ```
 
@@ -264,61 +246,68 @@ GET /api/plugin
 POST /api/plugin/{authCode}/info
 ```
 
+#### PluginType 枚举
+
+| 枚举 | 值         |
+| ---- | ---------- |
+| 0    | 酷Q插件    |
+| 1    | 小栗子插件 |
+| 2    | 原生插件   |
+
+#### Auth 枚举
+
+| 枚举 | 值               |
+| ---- | ---------------- |
+| 20   | 取Cookies        |
+| 30   | 接收语音         |
+| 101  | 发送群消息       |
+| 103  | 发送讨论组消息   |
+| 106  | 发送私聊消息     |
+| 110  | 发送赞           |
+| 120  | 置群员移除       |
+| 121  | 置群员禁言       |
+| 122  | 置群管理员       |
+| 123  | 置全群禁言       |
+| 124  | 置匿名群员禁言   |
+| 125  | 置群匿名设置     |
+| 126  | 置群成员名片     |
+| 127  | 置群退出         |
+| 128  | 置群成员专属头衔 |
+| 130  | 取群成员信息     |
+| 131  | 取陌生人信息     |
+| 132  | 取群信息         |
+| 140  | 置讨论组退出     |
+| 150  | 置好友添加请求   |
+| 151  | 置群添加请求     |
+| 160  | 取群成员列表     |
+| 161  | 取群列表         |
+| 162  | 取好友列表       |
+| 180  | 撤回消息         |
+
 #### 200
 
-**Response:** 
+**Response:**
+
 ```json
 {
   "code": 0,
   "data": {
     "authCode": 10001,
-    "appId": "",
-    "loaderType": 0,
-    "ret": 1,
-    "apiver": 9,
-    "name": "水银掷筛机",
+    "enabled": true,
+    "pluginId": "me.cqp.luohuaming.Dice",
+    "pluginName": "水银掷筛机",
     "version": "1.1.3",
-    "version_id": 1,
     "author": "落花茗",
     "description": "R!",
-    "_event": [
-      {
-        "id": 1,
-        "type": 21,
-        "name": "私聊消息处理",
-        "function": "_eventPrivateMsg",
-        "priority": 10,
-        "address": 0
-      },
-      {
-        "id": 2,
-        "type": 2,
-        "name": "群消息处理",
-        "function": "_eventGroupMsg",
-        "priority": 10,
-        "address": 0
-      },
-      {
-        "id": 1001,
-        "type": 1001,
-        "name": "酷Q启动事件",
-        "function": "_eventStartup",
-        "priority": 30000,
-        "address": 0
-      }
-    ],
-    "menu": [],
-    "status": [],
-    "auth": [
-      101,
-      106
-    ]
+    "auth": [101, 106],
+    "pluginType": 0
   },
   "message": null
 }
 ```
 
 ### 400
+
 ```json
 {
   "code": 404,
@@ -335,7 +324,8 @@ POST /api/plugin/{authCode}/enable
 
 #### 200
 
-**Response:** 
+**Response:**
+
 ```json
 {
   "code": 0,
@@ -347,16 +337,14 @@ POST /api/plugin/{authCode}/enable
     "author": "落花茗",
     "description": "R!",
     "version": "1.1.3",
-    "auth": [
-      101,
-      106
-    ]
+    "auth": [101, 106]
   },
   "message": null
 }
 ```
 
 ### 400
+
 ```json
 {
   "code": 404,
@@ -373,7 +361,8 @@ POST /api/plugin/{authCode}/disable
 
 #### 200
 
-**Response:** 
+**Response:**
+
 ```json
 {
   "code": 0,
@@ -385,16 +374,14 @@ POST /api/plugin/{authCode}/disable
     "author": "落花茗",
     "description": "R!",
     "version": "1.1.3",
-    "auth": [
-      101,
-      106
-    ]
+    "auth": [101, 106]
   },
   "message": null
 }
 ```
 
 ### 400
+
 ```json
 {
   "code": 404,
@@ -411,7 +398,8 @@ POST /api/plugin/{authCode}/reload
 
 #### 200
 
-**Response:** 
+**Response:**
+
 ```json
 {
   "code": 0,
@@ -424,31 +412,8 @@ POST /api/plugin/{authCode}/reload
     "description": "R!!",
     "version": "2.0.0",
     "auth": [
-      20,
-      30,
-      101,
-      103,
-      106,
-      110,
-      120,
-      121,
-      122,
-      123,
-      124,
-      125,
-      126,
-      127,
-      128,
-      130,
-      131,
-      132,
-      140,
-      150,
-      151,
-      160,
-      161,
-      162,
-      180
+      20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
+      150, 151, 160, 161, 162, 180
     ]
   },
   "message": null
@@ -456,6 +421,7 @@ POST /api/plugin/{authCode}/reload
 ```
 
 ### 400
+
 ```json
 {
   "code": 404,
@@ -471,6 +437,7 @@ POST /api/plugin/reload-all
 ```
 
 #### 200
+
 ```json
 {
   "code": 0,
@@ -483,10 +450,7 @@ POST /api/plugin/reload-all
       "author": "落花茗",
       "description": "R!",
       "version": "1.1.3",
-      "auth": [
-        101,
-        106
-      ]
+      "auth": [101, 106]
     },
     {
       "authCode": 10005,
@@ -496,11 +460,7 @@ POST /api/plugin/reload-all
       "author": "落花茗",
       "description": "玩啥呢 不叫我",
       "version": "1.0.0",
-      "auth": [
-        101,
-        106,
-        161
-      ]
+      "auth": [101, 106, 161]
     },
     {
       "authCode": 10006,
@@ -511,38 +471,14 @@ POST /api/plugin/reload-all
       "description": "R!!",
       "version": "2.0.0",
       "auth": [
-        20,
-        30,
-        101,
-        103,
-        106,
-        110,
-        120,
-        121,
-        122,
-        123,
-        124,
-        125,
-        126,
-        127,
-        128,
-        130,
-        131,
-        132,
-        140,
-        150,
-        151,
-        160,
-        161,
-        162,
-        180
+        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
+        150, 151, 160, 161, 162, 180
       ]
     }
   ],
   "message": null
 }
 ```
-
 
 ---
 
@@ -555,17 +491,12 @@ GET /api/protocol/list
 ```
 
 **Response:**
+
 ```jsonc
 {
   "code": 0,
-  "data": [
-    "MiraiAPIHttp",
-    "Lagrange.Core",
-    "NoConnection",
-    "OneBot v11",
-    "Satori v1"
-  ],
-  "message": null
+  "data": ["MiraiAPIHttp", "Lagrange.Core", "NoConnection", "OneBot v11", "Satori v1"],
+  "message": null,
 }
 ```
 
@@ -578,18 +509,20 @@ GET /api/protocol/current
 #### 200
 
 **Response:**
+
 ```jsonc
 {
   "code": 0,
   "data": {
     "name": "NoConnection",
-    "isConnected": true
+    "isConnected": true,
   },
-  "message": null
+  "message": null,
 }
 ```
 
 #### 404
+
 ```json
 {
   "code": 404,
@@ -606,15 +539,17 @@ Get /api/protocol/disconnect
 #### 200
 
 **Request:**
+
 ```jsonc
 {
   "code": 0,
   "data": null,
-  "message": null
+  "message": null,
 }
 ```
 
 #### 400
+
 ```json
 {
   "code": 400,
@@ -644,7 +579,8 @@ Get /api/protocol/connect/{name}
 
 #### 200
 
-**Response:** 
+**Response:**
+
 ```json
 {
   "code": 0,
@@ -654,6 +590,7 @@ Get /api/protocol/connect/{name}
 ```
 
 #### 400
+
 ```json
 {
   "code": 400,
@@ -676,6 +613,7 @@ Get /api/protocol/connect/{name}
 ```
 
 ### 4.6 获取协议配置字典
+
 ```
 Get /api/protocol/config/{name}
 ```
@@ -709,21 +647,22 @@ Get /api/protocol/config/{name}
   "code": 400,
   "message": "由于服务器发生异常，获取协议配置参数失败"
 }
-
 ```
 
 ### 4.7 设置协议配置字典
+
 ```
 Post /api/protocol/config/{name}
 ```
-Body: 
+
+Body:
+
 ```json
 {
   "Ws": "ws://127.0.0.1:11451",
   "AuthKey": "1919810"
 }
 ```
-
 
 #### 200
 
@@ -771,6 +710,7 @@ GET /api/chat/categories
 ```
 
 **Response:**
+
 ```jsonc
 {
   "code": 0,
@@ -781,9 +721,9 @@ GET /api/chat/categories
       "name": "群名称",
       "lastMessage": "最近一条消息...",
       "lastMessageTime": "2026-05-21T12:00:00",
-      "unreadCount": 3
-    }
-  ]
+      "unreadCount": 3,
+    },
+  ],
 }
 ```
 
@@ -796,6 +736,7 @@ GET /api/chat/histories/{type}/{targetId}?page=1&pageSize=20
 - `type`: `group` | `private`
 
 **Response:**
+
 ```jsonc
 {
   "code": 0,
@@ -810,13 +751,13 @@ GET /api/chat/histories/{type}/{targetId}?page=1&pageSize=20
         "message": "[CQ:at,qq=10001] 你好",
         "messageId": 5001,
         "isRecalled": false,
-        "time": "2026-05-21T12:00:00"
-      }
+        "time": "2026-05-21T12:00:00",
+      },
     ],
     "total": 150,
     "page": 1,
-    "pageSize": 20
-  }
+    "pageSize": 20,
+  },
 }
 ```
 
@@ -837,18 +778,20 @@ POST /api/chat/send/group
 ```
 
 **Request:**
+
 ```jsonc
 {
   "groupId": 123456789,
-  "message": "你好世界"
+  "message": "你好世界",
 }
 ```
 
 **Response:**
+
 ```jsonc
 {
   "code": 0,
-  "data": { "messageId": 5002 }
+  "data": { "messageId": 5002 },
 }
 ```
 
@@ -859,18 +802,20 @@ POST /api/chat/send/private
 ```
 
 **Request:**
+
 ```jsonc
 {
   "qqId": 987654321,
-  "message": "你好"
+  "message": "你好",
 }
 ```
 
 **Response:**
+
 ```jsonc
 {
   "code": 0,
-  "data": { "messageId": 5003 }
+  "data": { "messageId": 5003 },
 }
 ```
 
@@ -889,10 +834,11 @@ GET /api/chat/friends/{qqId}/nick
 ```
 
 **Response:**
+
 ```jsonc
 {
   "code": 0,
-  "data": { "nick": "好友昵称" }
+  "data": { "nick": "好友昵称" },
 }
 ```
 
@@ -903,10 +849,11 @@ GET /api/chat/groups/{groupId}/name
 ```
 
 **Response:**
+
 ```jsonc
 {
   "code": 0,
-  "data": { "name": "群名称" }
+  "data": { "name": "群名称" },
 }
 ```
 
@@ -917,10 +864,11 @@ GET /api/chat/groups/{groupId}/members/{qqId}/nick
 ```
 
 **Response:**
+
 ```jsonc
 {
   "code": 0,
-  "data": { "nick": "群名片或昵称" }
+  "data": { "nick": "群名片或昵称" },
 }
 ```
 
@@ -936,17 +884,18 @@ GET /api/log
 
 **参数:**
 
-| 参数 | 类型 | 说明 |
-|---|---|---|
-| `priority` | int | 最小日志等级 |
-| `pageIndex` | int | 页码数 |
-| `pageSize` | int | 每页条数 |
-| `search` | string | 来源，模糊匹配（可选） |
-| `asc` | bool | 按时间升序（可选） |
-| `start` | datetime | 开始时间（可选） |
-| `end` | datetime | 结束时间（可选） |
+| 参数        | 类型     | 说明                   |
+| ----------- | -------- | ---------------------- |
+| `priority`  | int      | 最小日志等级           |
+| `pageIndex` | int      | 页码数                 |
+| `pageSize`  | int      | 每页条数               |
+| `search`    | string   | 来源，模糊匹配（可选） |
+| `asc`       | bool     | 按时间升序（可选）     |
+| `start`     | datetime | 开始时间（可选）       |
+| `end`       | datetime | 结束时间（可选）       |
 
 **Response:**
+
 ```json
 {
   "code": 0,
@@ -1061,6 +1010,7 @@ GET /api/config/core
 ```
 
 **Response:**
+
 ```jsonc
 {
   "code": 0,
@@ -1069,154 +1019,154 @@ GET /api/config/core
       "title": "协议自动连接",
       "description": "",
       "type": "Boolean",
-      "value": true
+      "value": true,
     },
     "AutoProtocol": {
       "title": "自动连接协议",
       "description": "选择启动时自动连接的协议",
       "type": "String",
-      "value": "NoConnection"
+      "value": "NoConnection",
     },
     "ReconnectTime": {
       "title": "重新连接间隔时间",
       "description": "协议失去连接时每次重新连接的间隔时间",
       "type": "Int32",
-      "value": 5000
+      "value": 5000,
     },
     "PluginExitWhenCoreExit": {
       "title": "框架退出时插件自动退出",
       "description": "主程序退出时自动关闭所有插件",
       "type": "Boolean",
-      "value": true
+      "value": true,
     },
     "RestartPluginIfDead": {
       "title": "插件崩溃时自动重启",
       "description": "插件发生异常时自动重新启动",
       "type": "Boolean",
-      "value": false
+      "value": false,
     },
     "HeartBeatInterval": {
       "title": "心跳间隔时间",
       "description": "核心与插件之间的心跳检测间隔",
       "type": "Int32",
-      "value": 30000
+      "value": 30000,
     },
     "PluginInvokeTimeout": {
       "title": "插件方法调用超时",
       "description": "",
       "type": "Int32",
-      "value": 120000
+      "value": 120000,
     },
     "LoadTimeout": {
       "title": "插件载入超时",
       "description": "",
       "type": "Int32",
-      "value": 10000
+      "value": 10000,
     },
     "UseDatabase": {
       "title": "日志使用数据库",
       "description": "是否将日志存储到数据库",
       "type": "Boolean",
-      "value": true
+      "value": true,
     },
     "MessageCacheSize": {
       "title": "消息缓存数量",
       "description": "内存中缓存的消息数量限制",
       "type": "Int32",
-      "value": 4096
+      "value": 4096,
     },
     "EnableChatImageCacheMaxSizeControl": {
       "title": "启用最大缓存图片体积控制",
       "description": "缓存文件夹超出体积时，会从最久的图片开始删除",
       "type": "Boolean",
-      "value": false
+      "value": false,
     },
     "MaxChatImageCacheFolderSize": {
       "title": "缓存文件夹最大大小",
       "description": "",
       "type": "Int64",
-      "value": 1024
+      "value": 1024,
     },
     "EnableChatImageCacheExpireTimeControl": {
       "title": "启用缓存图片最大储存时限控制",
       "description": "图片最大保留一定天数后，会从最久的图片开始删除",
       "type": "Boolean",
-      "value": false
+      "value": false,
     },
     "ChatImageCacheExpireTime": {
       "title": "缓存图片最大储存时限",
       "description": "",
       "type": "Int64",
-      "value": 30
+      "value": 30,
     },
     "DebugMode": {
       "title": "调试模式",
       "description": "启用调试模式输出详细信息",
       "type": "Boolean",
-      "value": false
+      "value": false,
     },
     "ActionAfterOfflineSeconds": {
       "title": "离线操作等待时间",
       "description": "离线后执行操作的等待时间",
       "type": "Int32",
-      "value": 120
+      "value": 120,
     },
     "OfflineActionSendEmail": {
       "title": "启用离线后邮件发送",
       "description": "",
       "type": "Boolean",
-      "value": false
+      "value": false,
     },
     "OfflineActionEmail_SMTPServer": {
       "title": "SMTP服务器",
       "description": "",
       "type": "String",
-      "value": "smtp.qq.com"
+      "value": "smtp.qq.com",
     },
     "OfflineActionEmail_SMTPPort": {
       "title": "SMTP服务器端口",
       "description": "",
       "type": "UInt16",
-      "value": 587
+      "value": 587,
     },
     "OfflineActionEmail_SMTPUsername": {
       "title": "SMTP用户名",
       "description": "",
       "type": "String",
-      "value": ""
+      "value": "",
     },
     "OfflineActionEmail_SMTPPassport": {
       "title": "SMTP授权码",
       "description": "",
       "type": "String",
-      "value": ""
+      "value": "",
     },
     "OfflineActionEmail_SMTPSenderEmail": {
       "title": "邮件发送方邮箱",
       "description": "",
       "type": "String",
-      "value": ""
+      "value": "",
     },
     "OfflineActionEmail_SMTPReceiveEmail": {
       "title": "邮件接收方邮箱",
       "description": "",
       "type": "String",
-      "value": ""
+      "value": "",
     },
     "OfflineActionRunCommand": {
       "title": "启用离线后执行终端指令",
       "description": "",
       "type": "Boolean",
-      "value": false
+      "value": false,
     },
     "OfflineActionCommands": {
       "title": "离线后执行终端指令",
       "description": "",
       "type": "List`1",
-      "value": []
-    }
+      "value": [],
+    },
   },
-  "message": null
+  "message": null,
 }
 ```
 
@@ -1227,10 +1177,11 @@ Post /api/config/core
 ```
 
 **Request:**
+
 ```jsonc
 {
   "key": "MessageCacheSize",
-  "value": 1024
+  "value": 1024,
 }
 ```
 
@@ -1263,7 +1214,6 @@ Post /api/config/core
 ```
 Get /api/config/protocol/{name}
 ```
-
 
 #### 200
 
@@ -1317,10 +1267,11 @@ Post /api/config/protocol/{name}
 ```
 
 **Request:**
+
 ```jsonc
 {
   "key": "FullMemberInfo",
-  "value": false
+  "value": false,
 }
 ```
 
@@ -1380,6 +1331,7 @@ GET /hub/amn?access_token={token}
 ### OnGroupMessage — 群消息
 
 **载荷:**
+
 ```jsonc
 {
   "pluginAppId": "com.example.plugin",
@@ -1389,7 +1341,7 @@ GET /hub/amn?access_token={token}
   "qqId": 987654321,
   "message": "消息文本 (含 CQ 码)",
   "rawMessage": "原始消息",
-  "messageId": 5001
+  "messageId": 5001,
 }
 ```
 
@@ -1402,7 +1354,7 @@ GET /hub/amn?access_token={token}
   "subType": 0,
   "qqId": 987654321,
   "message": "消息文本",
-  "messageId": 5002
+  "messageId": 5002,
 }
 ```
 
@@ -1413,7 +1365,7 @@ GET /hub/amn?access_token={token}
   "pluginAppId": "com.example.plugin",
   "groupId": 123456789,
   "qqId": 987654321,
-  "duration": 600
+  "duration": 600,
 }
 ```
 
@@ -1423,7 +1375,7 @@ GET /hub/amn?access_token={token}
 {
   "pluginAppId": "com.example.plugin",
   "groupId": 123456789,
-  "qqId": 987654321
+  "qqId": 987654321,
 }
 ```
 
@@ -1433,7 +1385,7 @@ GET /hub/amn?access_token={token}
 {
   "pluginAppId": "com.example.plugin",
   "groupId": 123456789,
-  "qqId": 987654321
+  "qqId": 987654321,
 }
 ```
 
@@ -1442,7 +1394,7 @@ GET /hub/amn?access_token={token}
 ```jsonc
 {
   "pluginAppId": "com.example.plugin",
-  "qqId": 987654321
+  "qqId": 987654321,
 }
 ```
 
@@ -1452,7 +1404,7 @@ GET /hub/amn?access_token={token}
 {
   "type": "group",
   "targetId": 123456789,
-  "messageId": 5001
+  "messageId": 5001,
 }
 ```
 
@@ -1464,7 +1416,7 @@ GET /hub/amn?access_token={token}
   "targetId": 123456789,
   "qqId": 987654321,
   "message": "消息内容",
-  "messageId": 5003
+  "messageId": 5003,
 }
 ```
 
@@ -1474,7 +1426,7 @@ GET /hub/amn?access_token={token}
 {
   "appId": "com.example.plugin",
   "enabled": true,
-  "hasConnection": true
+  "hasConnection": true,
 }
 ```
 
@@ -1488,7 +1440,7 @@ GET /hub/amn?access_token={token}
   "version": "1.0.0",
   "description": "描述",
   "authCode": 1001,
-  "pid": 12346
+  "pid": 12346,
 }
 ```
 
@@ -1502,7 +1454,7 @@ GET /hub/amn?access_token={token}
   "source": "Another-Mirai-Native",
   "name": "初始化",
   "detail": "详细信息",
-  "status": "unread"
+  "status": "unread",
 }
 ```
 
@@ -1511,7 +1463,7 @@ GET /hub/amn?access_token={token}
 ```jsonc
 {
   "id": 1,
-  "status": "read"
+  "status": "read",
 }
 ```
 
@@ -1520,7 +1472,48 @@ GET /hub/amn?access_token={token}
 ```jsonc
 {
   "url": "https://...",
-  "imageBase64": "iVBORw0..."
+  "imageBase64": "iVBORw0...",
+}
+```
+
+### OnQRCodeFinished — 扫码完成
+
+(无载荷)
+
+### OnTestInvoked — 插件测试事件
+
+````jsonc
+{
+  "pluginAppId": "com.example.plugin",
+  "message": "测试消息",
+  "response": "插件返回的消息",
+```jsonc
+{
+  "id": 1,
+  "time": "2026-05-21T12:00:00",
+  "level": "warning",
+  "source": "Another-Mirai-Native",
+  "name": "初始化",
+  "detail": "详细信息",
+  "status": "unread"
+}
+````
+
+### OnLogStatusUpdated — 日志状态更新
+
+```jsonc
+{
+  "id": 1,
+  "status": "read",
+}
+```
+
+### OnQRCodeDisplay — 登录二维码
+
+```jsonc
+{
+  "url": "https://...",
+  "imageBase64": "iVBORw0...",
 }
 ```
 
@@ -1534,6 +1527,6 @@ GET /hub/amn?access_token={token}
 {
   "pluginAppId": "com.example.plugin",
   "message": "测试消息",
-  "response": "插件返回的消息"
+  "response": "插件返回的消息",
 }
 ```
