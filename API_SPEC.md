@@ -1309,6 +1309,109 @@ Post /api/config/protocol/{name}
 
 ---
 
+### 7.4 获取 WebUI 配置
+
+```
+GET /api/config/webui
+```
+
+获取 WebUI 自身的配置项（监听地址、端口、HTTPS、证书路径等），每项含标题、描述和当前值。
+
+**Response:**
+
+```json
+{
+  "code": 0,
+  "data": {
+    "ListenIP": {
+      "title": "监听 IP",
+      "description": "WebUI 服务监听的 IP 地址，* 表示监听所有地址",
+      "type": "String",
+      "value": "127.0.0.1"
+    },
+    "ListenPort": {
+      "title": "监听端口",
+      "description": "WebUI 服务监听的端口号",
+      "type": "Int32",
+      "value": 5000
+    },
+    "EnableHTTPS": {
+      "title": "启用 HTTPS",
+      "description": "是否启用 HTTPS 加密连接",
+      "type": "Boolean",
+      "value": false
+    },
+    "CertificatePath": {
+      "title": "HTTPS 证书路径",
+      "description": "HTTPS 证书文件（PEM 或 PFX）的存放路径",
+      "type": "String",
+      "value": ""
+    },
+    "CertificateKeyPath": {
+      "title": "证书密钥路径",
+      "description": "HTTPS 证书密钥文件的存放路径",
+      "type": "String",
+      "value": ""
+    }
+  },
+  "message": null
+}
+```
+
+### 7.5 修改 WebUI 配置
+
+```
+POST /api/config/webui
+```
+
+修改 WebUI 监听地址、端口、HTTPS 证书路径及管理密码。修改后需重启 WebUI 生效。
+
+**Request:**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `Key` | string | 配置项名：ListenIP、ListenPort、EnableHTTPS、Password、CertificatePath、CertificateKeyPath |
+| `Value` | any | 新值，类型自动适配 |
+
+```json
+{
+  "key": "ListenPort",
+  "value": 8080
+}
+```
+
+**Response (200):**
+
+```json
+{
+  "code": 0,
+  "data": null,
+  "message": null
+}
+```
+
+**Response (400):**
+
+```json
+{
+  "code": 400,
+  "data": null,
+  "message": "端口号需在 0 ~ 65535 之间"
+}
+```
+
+**Response (404):**
+
+```json
+{
+  "code": 404,
+  "data": null,
+  "message": "未能找到名称为 xxx 的 WebUI 配置项"
+}
+```
+
+---
+
 ## 8. 图片
 
 ### 8.1 获取缓存文件
@@ -1329,40 +1432,51 @@ GET /file/{type}/{file}
 ## 连接
 
 ```
-GET /hub/amn?access_token={token}
+GET /realtime?access_token={token}
 ```
 
 通过 Query String 传递 JWT。
 
 ## 事件 (服务端 → 客户端)
 
-### OnGroupMessage — 群消息
-
-**载荷:**
+### OnGroupMsg — 群消息
 
 ```jsonc
 {
-  "pluginAppId": "com.example.plugin",
-  "type": 1,
-  "subType": 0,
-  "groupId": 123456789,
-  "qqId": 987654321,
-  "message": "消息文本 (含 CQ 码)",
-  "rawMessage": "原始消息",
-  "messageId": 5001,
+  "msgId": 5001,
+  "group": 123456789,
+  "qq": 987654321,
+  "msg": "消息文本 (含 CQ 码)",
+  "time": "2026-05-21T12:00:00"
 }
 ```
 
-### OnPrivateMessage — 私聊消息
+### OnPrivateMsg — 私聊消息
 
 ```jsonc
 {
-  "pluginAppId": "com.example.plugin",
-  "type": 1,
-  "subType": 0,
-  "qqId": 987654321,
-  "message": "消息文本",
-  "messageId": 5002,
+  "msgId": 5002,
+  "qq": 987654321,
+  "msg": "消息文本",
+  "time": "2026-05-21T12:00:00"
+}
+```
+
+### OnGroupAdded — 群成员增加
+
+```jsonc
+{
+  "group": 123456789,
+  "qq": 987654321
+}
+```
+
+### OnGroupLeft — 群成员退出
+
+```jsonc
+{
+  "group": 123456789,
+  "qq": 987654321
 }
 ```
 
@@ -1370,171 +1484,152 @@ GET /hub/amn?access_token={token}
 
 ```jsonc
 {
-  "pluginAppId": "com.example.plugin",
-  "groupId": 123456789,
-  "qqId": 987654321,
-  "duration": 600,
+  "group": 123456789,
+  "qq": 987654321,
+  "operatedQQ": 111111,
+  "time": "2026-05-21T12:00:00"
 }
 ```
 
-### OnGroupMemberAdded — 群成员增加
+### OnGroupMsgRecall — 群消息撤回
 
 ```jsonc
 {
-  "pluginAppId": "com.example.plugin",
-  "groupId": 123456789,
-  "qqId": 987654321,
+  "msgId": 5001,
+  "qq": 987654321,
+  "msg": "消息内容"
 }
 ```
 
-### OnGroupMemberLeft — 群成员退出
+### OnPrivateMsgRecall — 私聊消息撤回
 
 ```jsonc
 {
-  "pluginAppId": "com.example.plugin",
-  "groupId": 123456789,
-  "qqId": 987654321,
+  "msgId": 5002,
+  "qq": 987654321,
+  "msg": "消息内容"
 }
 ```
 
-### OnFriendAdded — 新增好友
+### OnGroupMessageSend — 群消息发送回执
 
 ```jsonc
 {
-  "pluginAppId": "com.example.plugin",
-  "qqId": 987654321,
+  "msgId": 5003,
+  "group": 123456789,
+  "msg": "消息内容",
+  "plugin": { /* PluginDto */ }
 }
 ```
 
-### OnMessageRecall — 消息撤回
+### OnPrivateMessageSend — 私聊消息发送回执
 
 ```jsonc
 {
-  "type": "group",
-  "targetId": 123456789,
-  "messageId": 5001,
+  "msgId": 5004,
+  "qq": 987654321,
+  "msg": "消息内容",
+  "plugin": { /* PluginDto */ }
 }
 ```
 
-### OnMessageSent — 消息发送回执 (CQP 回调)
+### PluginEnableChanged — 插件启用/禁用
 
 ```jsonc
 {
-  "type": "group",
-  "targetId": 123456789,
-  "qqId": 987654321,
-  "message": "消息内容",
-  "messageId": 5003,
+  "plugin": { /* PluginDto */ }
 }
 ```
 
-### OnPluginStatusChanged — 插件状态变更
+### PluginAdded — 新插件加载
 
 ```jsonc
 {
-  "appId": "com.example.plugin",
-  "enabled": true,
-  "hasConnection": true,
+  "plugin": { /* PluginDto */ }
 }
 ```
 
-### OnPluginAdded — 新插件
+### PluginRemoved — 插件卸载
 
 ```jsonc
 {
-  "appId": "com.example.plugin",
-  "pluginName": "插件名",
-  "author": "作者",
-  "version": "1.0.0",
-  "description": "描述",
-  "authCode": 1001,
-  "pid": 12346,
+  "plugin": { /* PluginDto */ }
 }
 ```
 
-### OnLogAdded — 新日志
+### PluginConnectStatusChanged — 插件连接状态变更
 
 ```jsonc
 {
-  "id": 1,
-  "time": "2026-05-21T12:00:00",
-  "level": "warning",
-  "source": "Another-Mirai-Native",
-  "name": "初始化",
-  "detail": "详细信息",
-  "status": "unread",
+  "plugin": { /* PluginDto */ }
 }
 ```
 
-### OnLogStatusUpdated — 日志状态更新
+### ProtocolOnline — 协议上线
 
 ```jsonc
 {
-  "id": 1,
-  "status": "read",
+  "name": "OneBot v11"
 }
 ```
 
-### OnQRCodeDisplay — 登录二维码
+### ProtocolOffline — 协议下线
 
 ```jsonc
 {
-  "url": "https://...",
-  "imageBase64": "iVBORw0...",
+  "name": "OneBot v11"
 }
 ```
 
-### OnQRCodeFinished — 扫码完成
-
-(无载荷)
-
-### OnTestInvoked — 插件测试事件
-
-````jsonc
-{
-  "pluginAppId": "com.example.plugin",
-  "message": "测试消息",
-  "response": "插件返回的消息",
-```jsonc
-{
-  "id": 1,
-  "time": "2026-05-21T12:00:00",
-  "level": "warning",
-  "source": "Another-Mirai-Native",
-  "name": "初始化",
-  "detail": "详细信息",
-  "status": "unread"
-}
-````
-
-### OnLogStatusUpdated — 日志状态更新
+### CurrentBotInfoChanged — Bot 信息变更
 
 ```jsonc
 {
-  "id": 1,
-  "status": "read",
+  "nick": "机器人昵称",
+  "qq": 123456789
 }
 ```
 
-### OnQRCodeDisplay — 登录二维码
+### LogAdded — 新日志
 
 ```jsonc
 {
-  "url": "https://...",
-  "imageBase64": "iVBORw0...",
+  "logId": 1,
+  "log": { /* LogDto */ }
 }
 ```
 
-### OnQRCodeFinished — 扫码完成
-
-(无载荷)
-
-### OnTestInvoked — 插件测试事件
+### LogStatusUpdated — 日志状态更新
 
 ```jsonc
 {
-  "pluginAppId": "com.example.plugin",
-  "message": "测试消息",
-  "response": "插件返回的消息",
+  "logId": 1,
+  "status": "read"
+}
+```
+
+### UsageUpdated — 系统资源占用更新（每秒）
+
+```jsonc
+{
+  "cpuUsage": 23.5,
+  "memoryUsage": 45.2,
+  "cpuCurrentFrequency": 3600.0,
+  "usedMemoryInMB": 8192,
+  "totalMemoryInMB": 16384
+}
+```
+
+### PluginUsageUpdated — 进程资源占用更新（每秒）
+
+```jsonc
+{
+  "totalProcessMemory": 512.5,
+  "totalProcessCPU": 12.3,
+  "processedMessageCount": 1000,
+  "sentMessageCount": 500,
+  "pluginUsages": [
+    { /* DashboardPluginItem */ }
+  ]
 }
 ```
