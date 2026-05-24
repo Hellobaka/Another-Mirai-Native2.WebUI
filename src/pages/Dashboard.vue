@@ -179,7 +179,9 @@ async function fetchData() {
 onMounted(() => {
   fetchData()
   refreshTimer = setInterval(fetchData, 5000)
-  tickTimer = setInterval(() => { nowTick.value++ }, 1000)
+  tickTimer = setInterval(() => {
+    nowTick.value++
+  }, 1000)
 })
 
 onUnmounted(() => {
@@ -190,7 +192,13 @@ onUnmounted(() => {
 
 <template>
   <div>
-    <v-alert v-if="loadError && !loading" type="warning" variant="tonal" density="compact" class="mb-4">
+    <v-alert
+      v-if="loadError && !loading"
+      type="warning"
+      variant="tonal"
+      density="compact"
+      class="mb-4"
+    >
       {{ loadError }}
     </v-alert>
 
@@ -228,7 +236,10 @@ onUnmounted(() => {
               </v-avatar>
               <span class="tile-label">Bot QQ</span>
               <v-spacer />
-              <span class="tile-dot" :class="info.currentBotQQ ? 'tile-dot--on' : 'tile-dot--off'" />
+              <span
+                class="tile-dot"
+                :class="info.currentBotQQ ? 'tile-dot--on' : 'tile-dot--off'"
+              />
             </div>
             <div class="tile-value mt-3">
               <span v-if="info.currentBotQQ">{{ info.currentBotQQ }}</span>
@@ -263,7 +274,6 @@ onUnmounted(() => {
             <div class="tile-value mt-3">
               <AnimatedCounter :target="info.loadedPluginCount" />
             </div>
-            <div class="tile-sub">{{ runningProcessCount }} 个进程运行中</div>
           </v-card>
         </v-col>
 
@@ -319,9 +329,25 @@ onUnmounted(() => {
 
             <template v-if="usage">
               <div class="resource-rings">
-                <CpuMemoryRing :value="usage.cpuUsage" label="CPU 占用" color="#8CB4FF" :size="110" />
-                <CpuMemoryRing :value="usage.memoryUsage" label="内存占用" color="#4CAF84" :size="110" />
-                <CpuMemoryRing :value="0" label="磁盘占用" color="#FF9800" :size="110" :pending="true" />
+                <CpuMemoryRing
+                  :value="usage.cpuUsage"
+                  label="CPU 占用"
+                  color="#8CB4FF"
+                  :size="110"
+                />
+                <CpuMemoryRing
+                  :value="usage.memoryUsage"
+                  label="内存占用"
+                  color="#4CAF84"
+                  :size="110"
+                />
+                <CpuMemoryRing
+                  :value="0"
+                  label="磁盘占用"
+                  color="#FF9800"
+                  :size="110"
+                  :pending="true"
+                />
               </div>
 
               <v-divider class="my-6" />
@@ -333,11 +359,16 @@ onUnmounted(() => {
                 </div>
                 <div class="resource-metric">
                   <span class="metric-label">已用 / 总内存</span>
-                  <span class="metric-val">{{ formatMemory(usage.usedMemoryInMB) }} / {{ formatMemory(usage.totalMemoryInMB) }}</span>
+                  <span class="metric-val"
+                    >{{ formatMemory(usage.usedMemoryInMB) }} /
+                    {{ formatMemory(usage.totalMemoryInMB) }}</span
+                  >
                 </div>
                 <div class="resource-metric">
                   <span class="metric-label">进程总内存</span>
-                  <span class="metric-val">{{ formatMemory(pluginUsage?.totalProcessMemory ?? 0) }}</span>
+                  <span class="metric-val">{{
+                    formatMemory(pluginUsage?.totalProcessMemory ?? 0)
+                  }}</span>
                 </div>
                 <div class="resource-metric resource-metric--pending">
                   <span class="metric-label">磁盘可用 / 总量</span>
@@ -371,7 +402,7 @@ onUnmounted(() => {
               <div class="info-row">
                 <span class="info-label">当前协议</span>
                 <template v-if="currentProtocol">
-                  <div style="display:flex;align-items:center;gap:8px">
+                  <div style="display: flex; align-items: center; gap: 8px">
                     <span class="info-val">{{ currentProtocol.name }}</span>
                     <v-chip
                       :color="currentProtocol.isConnected ? 'success' : 'warning'"
@@ -422,21 +453,41 @@ onUnmounted(() => {
                 <tr>
                   <th class="sort-th" @click="toggleSort('name')">
                     进程名
-                    <v-icon v-if="sortKey === 'name'" :icon="sortDir === 'asc' ? 'mdi-arrow-up' : 'mdi-arrow-down'" size="14" class="ml-1" />
+                    <v-icon
+                      v-if="sortKey === 'name'"
+                      :icon="sortDir === 'asc' ? 'mdi-arrow-up' : 'mdi-arrow-down'"
+                      size="14"
+                      class="ml-1"
+                    />
                   </th>
                   <th class="sort-th" @click="toggleSort('pid')">
                     PID
-                    <v-icon v-if="sortKey === 'pid'" :icon="sortDir === 'asc' ? 'mdi-arrow-up' : 'mdi-arrow-down'" size="14" class="ml-1" />
+                    <v-icon
+                      v-if="sortKey === 'pid'"
+                      :icon="sortDir === 'asc' ? 'mdi-arrow-up' : 'mdi-arrow-down'"
+                      size="14"
+                      class="ml-1"
+                    />
                   </th>
-                  <th class="sort-th" style="min-width:200px" @click="toggleSort('cpu')">
+                  <th class="sort-th" style="min-width: 200px" @click="toggleSort('cpu')">
                     CPU 占用
-                    <v-icon v-if="sortKey === 'cpu'" :icon="sortDir === 'asc' ? 'mdi-arrow-up' : 'mdi-arrow-down'" size="14" class="ml-1" />
+                    <v-icon
+                      v-if="sortKey === 'cpu'"
+                      :icon="sortDir === 'asc' ? 'mdi-arrow-up' : 'mdi-arrow-down'"
+                      size="14"
+                      class="ml-1"
+                    />
                   </th>
-                  <th class="sort-th" style="min-width:200px" @click="toggleSort('mem')">
+                  <th class="sort-th" style="min-width: 200px" @click="toggleSort('mem')">
                     内存占用
-                    <v-icon v-if="sortKey === 'mem'" :icon="sortDir === 'asc' ? 'mdi-arrow-up' : 'mdi-arrow-down'" size="14" class="ml-1" />
+                    <v-icon
+                      v-if="sortKey === 'mem'"
+                      :icon="sortDir === 'asc' ? 'mdi-arrow-up' : 'mdi-arrow-down'"
+                      size="14"
+                      class="ml-1"
+                    />
                   </th>
-                  <th style="width:104px">操作</th>
+                  <th style="width: 104px">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -459,7 +510,9 @@ onUnmounted(() => {
                     <div class="bar-cell">
                       <span class="bar-label">{{ item.memoryUsage.toFixed(1) }} MB</span>
                       <v-progress-linear
-                        :model-value="getProcessShare(item.memoryUsage, pluginUsage.totalProcessMemory)"
+                        :model-value="
+                          getProcessShare(item.memoryUsage, pluginUsage.totalProcessMemory)
+                        "
                         color="success"
                         bg-opacity="0.12"
                         rounded
@@ -479,7 +532,9 @@ onUnmounted(() => {
                         @click.stop="handleDisable(item)"
                       >
                         <v-icon icon="mdi-stop" size="20" />
-                        <v-tooltip activator="parent" location="top">{{ item.id === 0 ? '主框架不可禁用' : '禁用插件' }}</v-tooltip>
+                        <v-tooltip activator="parent" location="top">{{
+                          item.id === 0 ? '主框架不可禁用' : '禁用插件'
+                        }}</v-tooltip>
                       </v-btn>
                       <v-btn
                         icon
@@ -491,7 +546,9 @@ onUnmounted(() => {
                         @click.stop="handleReload(item)"
                       >
                         <v-icon icon="mdi-restart" size="20" />
-                        <v-tooltip activator="parent" location="top">{{ item.id === 0 ? '主框架不可重载' : '重载插件' }}</v-tooltip>
+                        <v-tooltip activator="parent" location="top">{{
+                          item.id === 0 ? '主框架不可重载' : '重载插件'
+                        }}</v-tooltip>
                       </v-btn>
                     </div>
                   </td>
