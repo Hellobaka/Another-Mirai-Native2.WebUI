@@ -329,7 +329,6 @@ onUnmounted(() => {
         <v-col cols="12" md="8">
           <v-card class="glass-card pa-6" height="100%">
             <div class="text-subtitle-2 font-weight-bold">系统资源</div>
-            <div class="text-caption text-medium-emphasis mt-1 mb-6">每 5 秒自动刷新</div>
 
             <template v-if="usage">
               <div class="resource-rings">
