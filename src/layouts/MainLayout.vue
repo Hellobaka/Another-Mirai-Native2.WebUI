@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useAuthStore } from '@/stores/auth'
@@ -15,6 +15,10 @@ const display = useDisplay()
 
 const isMobile = computed(() => display.smAndDown.value)
 const drawerPermanent = computed(() => !isMobile.value)
+
+watch(() => app.pageTitle, (title) => {
+  document.title = title ? `${title} - AMN2 WebUI` : 'AMN2 WebUI'
+}, { immediate: true })
 
 const botQQ = ref(0)
 const botNick = ref('')
