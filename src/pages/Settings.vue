@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
+import { useAuthStore } from '@/stores/auth'
+import { useHubStore } from '@/stores/hub'
 import { useNotifyStore } from '@/stores/notify'
-import { getCoreConfig, setCoreConfig, getProtocolConfig, setProtocolConfig } from '@/api/config'
+import { getCoreConfig, setCoreConfig, getProtocolConfig, setProtocolConfig, getWebUIConfig, setWebUIConfig } from '@/api/config'
 import { getProtocolList } from '@/api/protocol'
 import { getErrorMessage } from '@/api/client'
 import type { GetConfigResponseItem } from '@/models'
 
+const router = useRouter()
 const app = useAppStore()
+const auth = useAuthStore()
+const hub = useHubStore()
 const notify = useNotifyStore()
 app.setPageTitle('设置')
 
@@ -242,6 +248,69 @@ async function saveProtocolItem(protocolName: string, key: string, value: unknow
   }
 }
 
+// --- WebUI config ---
+const webuiConfig = ref<Record<string, GetConfigResponseItem>>({})
+const webuiDraft = ref<Record<string, unknown>>({})
+const webuiLoading = ref(false)
+const webuiSaveLoading = ref(false)
+const webuiConfirmOpen = ref(false)
+const showPassword = ref(false)
+
+const webuiFieldOrder = [
+  'ListenIP',
+  'ListenPort',
+  'EnableHTTPS',
+  'Password',
+  'CertificatePath',
+  'CertificateKeyPath',
+]
+
+async function fetchWebUIConfig() {
+  webuiLoading.value = true
+  try {
+    const res = await getWebUIConfig()
+    if (res.data.code === 0) {
+      webuiConfig.value = res.data.data
+      webuiDraft.value = Object.fromEntries(
+        Object.entries(res.data.data).map(([k, item]) => [k, item.value]),
+      )
+    }
+  } finally {
+    webuiLoading.value = false
+  }
+}
+
+function updateWebuiDraft(key: string, value: unknown) {
+  webuiDraft.value[key] = value
+}
+
+async function confirmWebuiSave() {
+  webuiSaveLoading.value = true
+  try {
+    const changed = webuiFieldOrder.filter(
+      (k) => webuiConfig.value[k] && String(webuiDraft.value[k]) !== String(webuiConfig.value[k].value),
+    )
+    for (const key of changed) {
+      await setWebUIConfig(key, webuiDraft.value[key])
+    }
+    for (const key of changed) {
+      webuiConfig.value[key] = { ...webuiConfig.value[key], value: webuiDraft.value[key] }
+    }
+    webuiConfirmOpen.value = false
+    notify.warning('已保存，保存配置后将会登出')
+    setTimeout(() => {
+      notify.clear()
+      hub.disconnect()
+      auth.logout()
+      router.push({ name: 'Login' })
+    }, 1500)
+  } catch (e) {
+    notify.error(getErrorMessage(e, '保存失败'))
+  } finally {
+    webuiSaveLoading.value = false
+  }
+}
+
 // --- Section nav + scroll spy ---
 const sectionTab = ref(configSections[0].title)
 const sectionRefs = ref<Record<string, HTMLElement>>({})
@@ -283,6 +352,7 @@ onMounted(() => {
     }, 300)
   })
   fetchProtocolList()
+  fetchWebUIConfig()
 })
 onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
 </script>
@@ -303,6 +373,7 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
         <v-tabs v-model="tab" color="primary">
           <v-tab value="core" prepend-icon="mdi-cog">核心配置</v-tab>
           <v-tab value="protocol" prepend-icon="mdi-power-plug">协议管理</v-tab>
+          <v-tab value="webui" prepend-icon="mdi-web">WebUI</v-tab>
         </v-tabs>
       </div>
       <div v-show="tab === 'core'" style="max-width: 720px; margin: 0 auto">
@@ -610,6 +681,122 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
         </v-card-text>
       </v-card>
     </div>
+
+    <!-- ========== WebUI Config ========== -->
+    <div v-show="tab === 'webui'">
+      <v-card class="glass-card" style="max-width: 720px; margin: 0 auto">
+        <v-card-title class="d-flex align-center pa-4">
+          <v-icon icon="mdi-web" class="mr-2" color="primary" />
+          <span class="text-body-1">WebUI 配置</span>
+        </v-card-title>
+        <v-card-text class="pt-0">
+          <v-skeleton-loader v-if="webuiLoading" type="list-item-two-line@4" />
+          <div v-else>
+            <div
+              v-for="key in webuiFieldOrder.filter((k) => webuiConfig[k])"
+              :key="key"
+              class="config-row d-flex align-center py-2"
+            >
+              <div class="flex-grow-1 mr-3">
+                <div class="text-body-2">{{ webuiConfig[key].title }}</div>
+                <div v-if="webuiConfig[key].description" class="text-caption text-medium-emphasis">
+                  {{ webuiConfig[key].description }}
+                </div>
+              </div>
+              <div class="config-control">
+                <v-switch
+                  v-if="webuiConfig[key].type === 'Boolean'"
+                  :model-value="webuiDraft[key] as boolean"
+                  color="primary"
+                  hide-details
+                  density="compact"
+                  @update:model-value="(v: boolean | null) => { if (v !== null) updateWebuiDraft(key, v) }"
+                />
+                <v-text-field
+                  v-else-if="webuiConfig[key].type === 'Int32' || webuiConfig[key].type === 'UInt16'"
+                  :model-value="String(webuiDraft[key] ?? '')"
+                  type="number"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                  style="width: 250px"
+                  @update:model-value="(v: string) => { const n = Number(v); if (!isNaN(n)) updateWebuiDraft(key, n) }"
+                />
+                <v-text-field
+                  v-else-if="key === 'Password'"
+                  :model-value="String(webuiDraft[key] ?? '')"
+                  :type="showPassword ? 'text' : 'password'"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                  style="width: 250px"
+                  :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                  @update:model-value="(v: string) => updateWebuiDraft(key, v)"
+                  @click:append-inner="showPassword = !showPassword"
+                />
+                <v-text-field
+                  v-else
+                  :model-value="String(webuiDraft[key] ?? '')"
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                  style="width: 250px"
+                  @update:model-value="(v: string) => updateWebuiDraft(key, v)"
+                />
+              </div>
+            </div>
+          </div>
+        </v-card-text>
+        <v-card-actions class="px-4 pb-4 pt-2 d-flex justify-end ga-2">
+          <v-btn
+            variant="tonal"
+            color="warning"
+            prepend-icon="mdi-refresh"
+            min-width="100"
+            :loading="webuiLoading"
+            @click="fetchWebUIConfig"
+          >
+            重置
+          </v-btn>
+          <v-btn
+            variant="tonal"
+            color="primary"
+            prepend-icon="mdi-content-save"
+            min-width="100"
+            @click="webuiConfirmOpen = true"
+          >
+            保存
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </div>
+
+    <!-- WebUI save confirm dialog -->
+    <v-dialog v-model="webuiConfirmOpen" max-width="420" :persistent="webuiSaveLoading">
+      <v-card class="glass-card">
+        <v-card-title class="d-flex align-center pa-4 pb-2">
+          <v-icon icon="mdi-alert-circle-outline" color="warning" class="mr-2" />
+          <span class="text-body-1">保存 WebUI 配置</span>
+        </v-card-title>
+        <v-card-text class="text-body-2 pb-2">
+          修改 WebUI 配置需要重启服务，在保存配置后请手动重启服务使配置生效。
+        </v-card-text>
+        <v-card-actions class="justify-end px-4 pb-4">
+          <v-btn variant="text" min-width="100" :disabled="webuiSaveLoading" @click="webuiConfirmOpen = false">
+            取消
+          </v-btn>
+          <v-btn
+            variant="tonal"
+            color="primary"
+            min-width="100"
+            :loading="webuiSaveLoading"
+            @click="confirmWebuiSave"
+          >
+            确认保存
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
