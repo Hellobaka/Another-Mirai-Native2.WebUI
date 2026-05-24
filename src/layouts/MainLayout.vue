@@ -65,7 +65,16 @@ onMounted(() => {
       :permanent="drawerPermanent"
       elevation="0"
     >
-      <v-list-item class="pa-4" nav @click="router.push('/dashboard')" style="cursor: pointer">
+      <!-- Rail mode: centered avatar only -->
+      <div v-if="app.rail" class="d-flex justify-center py-3" style="cursor:pointer" @click="router.push('/dashboard')">
+        <v-avatar size="40">
+          <v-img v-if="botQQ > 0" :src="`https://q.qlogo.cn/g?b=qq&nk=${botQQ}&s=160`" :alt="botNick" />
+          <v-icon v-else icon="mdi-robot" size="24" />
+        </v-avatar>
+      </div>
+
+      <!-- Expanded mode: avatar + nick + QQ -->
+      <v-list-item v-else class="pa-4" nav @click="router.push('/dashboard')" style="cursor: pointer">
         <template #prepend>
           <v-avatar size="40">
             <v-img
