@@ -41,9 +41,14 @@ let tickTimer: ReturnType<typeof setInterval>
 
 function parseStartedTime(raw: string): number {
   if (!raw) return 0
-  const [dayPart, timePart] = raw.includes('.') ? raw.split('.') : ['', raw]
-  const [h = '0', m = '0', s = '0'] = timePart.split(':')
-  return (Number(dayPart) || 0) * 86400 + Number(h) * 3600 + Number(m) * 60 + Number(s)
+  const parts = raw.split(':')
+  if (parts.length === 4) {
+    const [d, h, m, s] = parts
+    return Number(d) * 86400 + Number(h) * 3600 + Number(m) * 60 + Number(s)
+  }
+  // Fallback: HH:MM:SS
+  const [h = '0', m = '0', s = '0'] = parts
+  return Number(h) * 3600 + Number(m) * 60 + Number(s)
 }
 
 function pad2(n: number) {
