@@ -30,11 +30,10 @@ async function handleLogin() {
   <div class="login-bg fill-height d-flex align-center justify-center">
     <v-card class="glass-card pa-8 login-card" max-width="420" width="100%">
       <div class="text-center mb-6">
-        <v-avatar size="64" color="primary" class="mb-4">
-          <v-icon icon="mdi-robot" size="36" />
-        </v-avatar>
-        <div class="text-h4 font-weight-bold">AMN2</div>
-        <div class="text-body-2 text-medium-emphasis mt-1">Another-Mirai-Native 管理面板</div>
+        <div class="text-h5 font-weight-bold mt-1">
+          Another-Mirai-Native2
+        </div>
+        <div class="text-caption text-medium-emphasis mt-1">管理面板</div>
       </div>
 
       <v-text-field
@@ -51,13 +50,7 @@ async function handleLogin() {
         {{ error }}
       </v-alert>
 
-      <v-btn
-        block
-        color="primary"
-        size="large"
-        :loading="loading"
-        @click="handleLogin"
-      >
+      <v-btn block color="primary" size="large" :loading="loading" @click="handleLogin">
         登录
       </v-btn>
     </v-card>
@@ -66,9 +59,22 @@ async function handleLogin() {
 
 <style scoped>
 .login-bg {
-  background: radial-gradient(ellipse at top, rgba(var(--v-theme-primary), 0.08), transparent 60%);
+  background: radial-gradient(ellipse at 50% 40%, rgba(var(--v-theme-primary), 0.07) 0%, transparent 65%);
 }
+
 .login-card {
-  backdrop-filter: blur(24px);
+  backdrop-filter: blur(32px);
+  border: 1px solid rgba(var(--v-theme-primary), 0.45) !important;
+  box-shadow:
+    0 0 0 1px rgba(var(--v-theme-primary), 0.15),
+    0 0 24px rgba(var(--v-theme-primary), 0.2),
+    0 0 64px rgba(var(--v-theme-primary), 0.1),
+    0 16px 48px rgba(0, 0, 0, 0.3) !important;
+  animation: border-pulse 4s ease-in-out infinite;
+}
+
+@keyframes border-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(var(--v-theme-primary), 0.15), 0 0 24px rgba(var(--v-theme-primary), 0.2), 0 0 64px rgba(var(--v-theme-primary), 0.1), 0 16px 48px rgba(0, 0, 0, 0.3); }
+  50%       { box-shadow: 0 0 0 1px rgba(var(--v-theme-primary), 0.25), 0 0 32px rgba(var(--v-theme-primary), 0.32), 0 0 80px rgba(var(--v-theme-primary), 0.16), 0 16px 48px rgba(0, 0, 0, 0.3); }
 }
 </style>
