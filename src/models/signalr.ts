@@ -6,19 +6,20 @@
 import type { PluginDto } from './plugin'
 import type { LogDto } from './log'
 import type { DashboardPluginItem } from './dashboard'
+import type { MessageItemBase } from './message'
 
 export interface GroupMsgPayload {
   msgId: number
   group: number
   qq: number
-  msg: string
+  msg: MessageItemBase[]
   time: string
 }
 
 export interface PrivateMsgPayload {
   msgId: number
   qq: number
-  msg: string
+  msg: MessageItemBase[]
   time: string
 }
 

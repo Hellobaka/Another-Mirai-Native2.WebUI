@@ -7,6 +7,28 @@ export type {
   DashboardPluginItem,
 } from './dashboard'
 export { type PluginDto, type PluginDetail, PluginTypeLabels, AuthLabels, authLabel } from './plugin'
+export {
+  MessageItemType,
+  type MessageItemTypeValue,
+  type MessageItemBase,
+  type TextItem,
+  type FaceItem,
+  type BFaceItem,
+  type ImageItem,
+  type RecordItem,
+  type AtItem,
+  type ReplyItem,
+  type DiceItem,
+  type RpsItem,
+  type ShakeItem,
+  type PokeItem,
+  type MessageItem,
+  ChatHistoryType,
+  type ChatHistoryTypeValue,
+  type ChatConversation,
+  type ChatMessage,
+  type SendMessageRequest,
+} from './message'
 export type { ProtocolStatusData } from './protocol'
 export type { GetConfigResponseItem, SetConfigRequest, CoreConfigMap, ProtocolConfigMap } from './config'
 export type { LogDto, LogQueryResultData, LogLevelValue } from './log'

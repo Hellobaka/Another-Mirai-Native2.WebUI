@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
 import { useNotifyStore } from '@/stores/notify'
 import { useHubStore } from '@/stores/hub'
+import { useChatStore } from '@/stores/chat'
 import { getBaseInformation } from '@/api/dashboard'
 import { SignalREvents } from '@/signalr/events'
 import type { CurrentBotInfoChangedPayload, LogAddedPayload } from '@/models'
@@ -16,6 +17,7 @@ const auth = useAuthStore()
 const app = useAppStore()
 const notify = useNotifyStore()
 const hub = useHubStore()
+const chat = useChatStore()
 const display = useDisplay()
 
 const isMobile = computed(() => display.smAndDown.value)
@@ -34,6 +36,7 @@ async function fetchBotInfo() {
     if (res.data.code === 0) {
       botQQ.value = res.data.data.currentBotQQ
       botNick.value = res.data.data.currentBotNick
+      chat.setBotQQ(res.data.data.currentBotQQ)
     }
   } catch {
     /* silent */
@@ -43,6 +46,7 @@ async function fetchBotInfo() {
 function onBotInfoChanged(data: CurrentBotInfoChangedPayload) {
   botQQ.value = data.qq
   botNick.value = data.nick
+  chat.setBotQQ(data.qq)
 }
 
 function onLogAlert(data: LogAddedPayload) {
@@ -56,6 +60,7 @@ const navItems = [
   { title: '仪表盘', icon: 'mdi-view-dashboard', to: '/dashboard' },
   { title: '插件管理', icon: 'mdi-puzzle', to: '/plugins' },
   { title: '日志', icon: 'mdi-text-box-outline', to: '/logs' },
+  { title: '聊天', icon: 'mdi-chat', to: '/chat' },
   { title: '协议管理', icon: 'mdi-power-plug', to: '/protocol' },
   { title: '设置', icon: 'mdi-cog', to: '/settings' },
 ]

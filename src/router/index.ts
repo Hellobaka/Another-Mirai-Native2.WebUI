@@ -8,6 +8,7 @@ import Plugins from '@/pages/Plugins.vue'
 import Logs from '@/pages/Logs.vue'
 import Settings from '@/pages/Settings.vue'
 import Protocol from '@/pages/Protocol.vue'
+import Chat from '@/pages/Chat.vue'
 
 const router = createRouter({
   history: createWebHistory('/'),
@@ -26,6 +27,7 @@ const router = createRouter({
         { path: 'dashboard', name: 'Dashboard', component: Dashboard },
         { path: 'plugins', name: 'Plugins', component: Plugins },
         { path: 'logs', name: 'Logs', component: Logs },
+        { path: 'chat', name: 'Chat', component: Chat },
         { path: 'protocol', name: 'Protocol', component: Protocol },
         { path: 'settings', name: 'Settings', component: Settings },
       ],

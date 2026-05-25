@@ -5,7 +5,14 @@ import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import { useHubStore } from '@/stores/hub'
 import { useNotifyStore } from '@/stores/notify'
-import { getCoreConfig, setCoreConfig, getProtocolConfig, setProtocolConfig, getWebUIConfig, setWebUIConfig } from '@/api/config'
+import {
+  getCoreConfig,
+  setCoreConfig,
+  getProtocolConfig,
+  setProtocolConfig,
+  getWebUIConfig,
+  setWebUIConfig,
+} from '@/api/config'
 import { getProtocolList } from '@/api/protocol'
 import { getErrorMessage } from '@/api/client'
 import type { GetConfigResponseItem } from '@/models'
@@ -42,6 +49,7 @@ const configSections = [
     title: '图片缓存',
     icon: 'mdi-image',
     keys: [
+      'EnableChat',
       'EnableChatImageCacheMaxSizeControl',
       'MaxChatImageCacheFolderSize',
       'EnableChatImageCacheExpireTimeControl',
@@ -288,7 +296,8 @@ async function confirmWebuiSave() {
   webuiSaveLoading.value = true
   try {
     const changed = webuiFieldOrder.filter(
-      (k) => webuiConfig.value[k] && String(webuiDraft.value[k]) !== String(webuiConfig.value[k].value),
+      (k) =>
+        webuiConfig.value[k] && String(webuiDraft.value[k]) !== String(webuiConfig.value[k].value),
     )
     for (const key of changed) {
       await setWebUIConfig(key, webuiDraft.value[key])
@@ -710,17 +719,28 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
                   color="primary"
                   hide-details
                   density="compact"
-                  @update:model-value="(v: boolean | null) => { if (v !== null) updateWebuiDraft(key, v) }"
+                  @update:model-value="
+                    (v: boolean | null) => {
+                      if (v !== null) updateWebuiDraft(key, v)
+                    }
+                  "
                 />
                 <v-text-field
-                  v-else-if="webuiConfig[key].type === 'Int32' || webuiConfig[key].type === 'UInt16'"
+                  v-else-if="
+                    webuiConfig[key].type === 'Int32' || webuiConfig[key].type === 'UInt16'
+                  "
                   :model-value="String(webuiDraft[key] ?? '')"
                   type="number"
                   variant="outlined"
                   density="compact"
                   hide-details
                   style="width: 250px"
-                  @update:model-value="(v: string) => { const n = Number(v); if (!isNaN(n)) updateWebuiDraft(key, n) }"
+                  @update:model-value="
+                    (v: string) => {
+                      const n = Number(v)
+                      if (!isNaN(n)) updateWebuiDraft(key, n)
+                    }
+                  "
                 />
                 <v-text-field
                   v-else-if="key === 'Password'"
@@ -782,7 +802,12 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
           修改 WebUI 配置需要重启服务，在保存配置后请手动重启服务使配置生效。
         </v-card-text>
         <v-card-actions class="justify-end px-4 pb-4">
-          <v-btn variant="text" min-width="100" :disabled="webuiSaveLoading" @click="webuiConfirmOpen = false">
+          <v-btn
+            variant="text"
+            min-width="100"
+            :disabled="webuiSaveLoading"
+            @click="webuiConfirmOpen = false"
+          >
             取消
           </v-btn>
           <v-btn
