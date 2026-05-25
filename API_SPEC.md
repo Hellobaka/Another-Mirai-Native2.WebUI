@@ -239,8 +239,8 @@ GET /api/plugin
       "description": "R!!",
       "version": "2.0.0",
       "auth": [
-        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128,
-        130, 131, 132, 140, 150, 151, 160, 161, 162, 180,
+        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
+        150, 151, 160, 161, 162, 180,
       ],
     },
   ],
@@ -420,8 +420,8 @@ POST /api/plugin/{authCode}/reload
     "description": "R!!",
     "version": "2.0.0",
     "auth": [
-      20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128,
-      130, 131, 132, 140, 150, 151, 160, 161, 162, 180
+      20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
+      150, 151, 160, 161, 162, 180
     ]
   },
   "message": null
@@ -479,8 +479,8 @@ POST /api/plugin/reload-all
       "description": "R!!",
       "version": "2.0.0",
       "auth": [
-        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128,
-        130, 131, 132, 140, 150, 151, 160, 161, 162, 180
+        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
+        150, 151, 160, 161, 162, 180
       ]
     }
   ],
@@ -503,13 +503,7 @@ GET /api/protocol/list
 ```jsonc
 {
   "code": 0,
-  "data": [
-    "MiraiAPIHttp",
-    "Lagrange.Core",
-    "NoConnection",
-    "OneBot v11",
-    "Satori v1",
-  ],
+  "data": ["MiraiAPIHttp", "Lagrange.Core", "NoConnection", "OneBot v11", "Satori v1"],
   "message": null,
 }
 ```
@@ -742,23 +736,27 @@ GET /api/chat/categories
       "senderID": 987654321,
       "type": 0,
       "time": "2026-05-21T12:00:00",
-      "message": [ { /* MessageItemBase[] — 消息链，见附录 */ } ],
+      "message": [
+        {
+          /* MessageItemBase[] — 消息链，见附录 */
+        },
+      ],
       "unreadCount": 3,
-      "isPinned": false
-    }
-  ]
+      "isPinned": false,
+    },
+  ],
 }
 ```
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `parentID` | long | 群号或 QQ 号 |
-| `senderID` | long | 最后发言者 QQ |
-| `type` | int | 0=Group, 1=Private, 2=Notice |
-| `time` | DateTime | 最后消息时间 |
-| `message` | MessageItemBase[] | 已解析的消息链 |
-| `unreadCount` | int | 未读消息数 |
-| `isPinned` | bool | 是否置顶 |
+| 字段          | 类型              | 说明                         |
+| ------------- | ----------------- | ---------------------------- |
+| `parentID`    | long              | 群号或 QQ 号                 |
+| `senderID`    | long              | 最后发言者 QQ                |
+| `type`        | int               | 0=Group, 1=Private, 2=Notice |
+| `time`        | DateTime          | 最后消息时间                 |
+| `message`     | MessageItemBase[] | 已解析的消息链               |
+| `unreadCount` | int               | 未读消息数                   |
+| `isPinned`    | bool              | 是否置顶                     |
 
 **Response (404):** `{ "code": 404, "message": "聊天功能未启用" }`
 
@@ -770,12 +768,12 @@ GET /api/chat/categories
 GET /api/chat/history?chatHistoryType={0|1}&parentId={id}&pageIndex=1&pageSize=50
 ```
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| `chatHistoryType` | int | 0=Group, 1=Private |
-| `parentId` | long | 群号或 QQ 号 |
-| `pageIndex` | int | 页码，从 1 开始 |
-| `pageSize` | int | 每页条数，默认 50 |
+| 参数              | 类型 | 说明               |
+| ----------------- | ---- | ------------------ |
+| `chatHistoryType` | int  | 0=Group, 1=Private |
+| `parentId`        | long | 群号或 QQ 号       |
+| `pageIndex`       | int  | 页码，从 1 开始    |
+| `pageSize`        | int  | 每页条数，默认 50  |
 
 **Response (200):**
 
@@ -789,26 +787,30 @@ GET /api/chat/history?chatHistoryType={0|1}&parentId={id}&pageIndex=1&pageSize=5
       "type": 0,
       "parentID": 123456789,
       "senderID": 987654321,
-      "message": [ { /* MessageItemBase[] — 消息链，见附录 */ } ],
+      "message": [
+        {
+          /* MessageItemBase[] — 消息链，见附录 */
+        },
+      ],
       "msgId": 5001,
       "recalled": false,
-      "pluginName": ""
-    }
-  ]
+      "pluginName": "",
+    },
+  ],
 }
 ```
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `id` | int | 记录 ID |
-| `time` | DateTime | 消息时间 |
-| `type` | int | 0=Group, 1=Private |
-| `parentID` | long | 群号或 QQ 号 |
-| `senderID` | long | 发送者 QQ |
-| `message` | MessageItemBase[] | 已解析的消息链 |
-| `msgId` | int | 协议层消息 ID |
-| `recalled` | bool | 是否已撤回 |
-| `pluginName` | string | 处理该消息的插件名 |
+| 字段         | 类型              | 说明               |
+| ------------ | ----------------- | ------------------ |
+| `id`         | int               | 记录 ID            |
+| `time`       | DateTime          | 消息时间           |
+| `type`       | int               | 0=Group, 1=Private |
+| `parentID`   | long              | 群号或 QQ 号       |
+| `senderID`   | long              | 发送者 QQ          |
+| `message`    | MessageItemBase[] | 已解析的消息链     |
+| `msgId`      | int               | 协议层消息 ID      |
+| `recalled`   | bool              | 是否已撤回         |
+| `pluginName` | string            | 处理该消息的插件名 |
 
 > 返回为 `ChatHistoryDto[]`，前端需按 `pageIndex`/`pageSize` 自行判断是否有更多页（返回条数 < pageSize 即为最后一页）。
 
@@ -822,11 +824,11 @@ GET /api/chat/history?chatHistoryType={0|1}&parentId={id}&pageIndex=1&pageSize=5
 GET /api/chat/message?chatHistoryType={0|1}&parentId={id}&messageId={msgId}
 ```
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| `chatHistoryType` | int | 0=Group, 1=Private |
-| `parentId` | long | 群号或 QQ 号 |
-| `messageId` | int | 消息 ID |
+| 参数              | 类型 | 说明               |
+| ----------------- | ---- | ------------------ |
+| `chatHistoryType` | int  | 0=Group, 1=Private |
+| `parentId`        | long | 群号或 QQ 号       |
+| `messageId`       | int  | 消息 ID            |
 
 **Response (200):** 同 5.2 中的单条 `ChatHistoryDto` 格式
 
@@ -1476,7 +1478,7 @@ POST /api/config/webui
 ### 8.1 获取缓存文件
 
 ```
-GET /file/{type}/{file}
+GET /api/cache/file/{type}/{file}
 ```
 
 - `type`是指文件的类型，目前有三种可选`image`（图片）、`record`（音频）、`video`（视频）
