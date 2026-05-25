@@ -1478,7 +1478,7 @@ POST /api/config/webui
 ### 8.1 获取缓存文件
 
 ```
-GET /api/cache/file/{type}/{file}
+GET /api/cache/{type}/{file}
 ```
 
 - `type`是指文件的类型，目前有三种可选`image`（图片）、`record`（音频）、`video`（视频）
