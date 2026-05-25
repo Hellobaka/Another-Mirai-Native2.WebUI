@@ -239,8 +239,8 @@ GET /api/plugin
       "description": "R!!",
       "version": "2.0.0",
       "auth": [
-        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
-        150, 151, 160, 161, 162, 180,
+        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128,
+        130, 131, 132, 140, 150, 151, 160, 161, 162, 180,
       ],
     },
   ],
@@ -420,8 +420,8 @@ POST /api/plugin/{authCode}/reload
     "description": "R!!",
     "version": "2.0.0",
     "auth": [
-      20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
-      150, 151, 160, 161, 162, 180
+      20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128,
+      130, 131, 132, 140, 150, 151, 160, 161, 162, 180
     ]
   },
   "message": null
@@ -479,8 +479,8 @@ POST /api/plugin/reload-all
       "description": "R!!",
       "version": "2.0.0",
       "auth": [
-        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
-        150, 151, 160, 161, 162, 180
+        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128,
+        130, 131, 132, 140, 150, 151, 160, 161, 162, 180
       ]
     }
   ],
@@ -503,7 +503,13 @@ GET /api/protocol/list
 ```jsonc
 {
   "code": 0,
-  "data": ["MiraiAPIHttp", "Lagrange.Core", "NoConnection", "OneBot v11", "Satori v1"],
+  "data": [
+    "MiraiAPIHttp",
+    "Lagrange.Core",
+    "NoConnection",
+    "OneBot v11",
+    "Satori v1",
+  ],
   "message": null,
 }
 ```
@@ -709,7 +715,13 @@ Body:
 
 ---
 
-## 5. 聊天（暂不实现，API定义大概率随开发而改动，不要参考）
+## 5. 聊天
+
+| ChatHistoryType | 值  | 说明 |
+| --------------- | --- | ---- |
+| Group           | 0   | 群聊 |
+| Private         | 1   | 私聊 |
+| Notice          | 2   | 通知 |
 
 ### 5.1 会话列表
 
@@ -717,131 +729,164 @@ Body:
 GET /api/chat/categories
 ```
 
-**Response:**
+获取所有聊天会话分类（按最后一条消息降序）。`message` 字段为已解析的消息链，`time` 已转为 DateTime。
+
+**Response (200):**
 
 ```jsonc
 {
   "code": 0,
   "data": [
     {
-      "id": 123456789,
-      "type": "group",
-      "name": "群名称",
-      "lastMessage": "最近一条消息...",
-      "lastMessageTime": "2026-05-21T12:00:00",
+      "parentID": 123456789,
+      "senderID": 987654321,
+      "type": 0,
+      "time": "2026-05-21T12:00:00",
+      "message": [ { /* MessageItemBase[] — 消息链，见附录 */ } ],
       "unreadCount": 3,
-    },
-  ],
+      "isPinned": false
+    }
+  ]
 }
 ```
 
-### 5.2 分页聊天记录
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `parentID` | long | 群号或 QQ 号 |
+| `senderID` | long | 最后发言者 QQ |
+| `type` | int | 0=Group, 1=Private, 2=Notice |
+| `time` | DateTime | 最后消息时间 |
+| `message` | MessageItemBase[] | 已解析的消息链 |
+| `unreadCount` | int | 未读消息数 |
+| `isPinned` | bool | 是否置顶 |
+
+**Response (404):** `{ "code": 404, "message": "聊天功能未启用" }`
+
+---
+
+### 5.2 查询聊天记录
 
 ```
-GET /api/chat/histories/{type}/{targetId}?page=1&pageSize=20
+GET /api/chat/history?chatHistoryType={0|1}&parentId={id}&pageIndex=1&pageSize=50
 ```
 
-- `type`: `group` | `private`
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `chatHistoryType` | int | 0=Group, 1=Private |
+| `parentId` | long | 群号或 QQ 号 |
+| `pageIndex` | int | 页码，从 1 开始 |
+| `pageSize` | int | 每页条数，默认 50 |
 
-**Response:**
+**Response (200):**
 
 ```jsonc
 {
   "code": 0,
-  "data": {
-    "items": [
-      {
-        "id": 1,
-        "type": "group",
-        "targetId": 123456789,
-        "senderId": 987654321,
-        "senderName": "发送者昵称",
-        "message": "[CQ:at,qq=10001] 你好",
-        "messageId": 5001,
-        "isRecalled": false,
-        "time": "2026-05-21T12:00:00",
-      },
-    ],
-    "total": 150,
-    "page": 1,
-    "pageSize": 20,
-  },
+  "data": [
+    {
+      "id": 1,
+      "time": "2026-05-21T12:00:00",
+      "type": 0,
+      "parentID": 123456789,
+      "senderID": 987654321,
+      "message": [ { /* MessageItemBase[] — 消息链，见附录 */ } ],
+      "msgId": 5001,
+      "recalled": false,
+      "pluginName": ""
+    }
+  ]
 }
 ```
 
-### 5.3 定位消息
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | int | 记录 ID |
+| `time` | DateTime | 消息时间 |
+| `type` | int | 0=Group, 1=Private |
+| `parentID` | long | 群号或 QQ 号 |
+| `senderID` | long | 发送者 QQ |
+| `message` | MessageItemBase[] | 已解析的消息链 |
+| `msgId` | int | 协议层消息 ID |
+| `recalled` | bool | 是否已撤回 |
+| `pluginName` | string | 处理该消息的插件名 |
+
+> 返回为 `ChatHistoryDto[]`，前端需按 `pageIndex`/`pageSize` 自行判断是否有更多页（返回条数 < pageSize 即为最后一页）。
+
+**Response (404):** `{ "code": 404, "message": "聊天功能未启用" }`
+
+---
+
+### 5.3 查询单条消息
 
 ```
-GET /api/chat/histories/around/{msgId}?type=group
+GET /api/chat/message?chatHistoryType={0|1}&parentId={id}&messageId={msgId}
 ```
 
-- `type`: `group` | `private`
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `chatHistoryType` | int | 0=Group, 1=Private |
+| `parentId` | long | 群号或 QQ 号 |
+| `messageId` | int | 消息 ID |
 
-**Response:** 同 5.2 分页格式，返回包含该消息及前后各约 10 条
+**Response (200):** 同 5.2 中的单条 `ChatHistoryDto` 格式
 
-### 5.4 发送群消息
+**Response (404):**
+
+```jsonc
+{ "code": 404, "message": "未找到对应的聊天消息" }
+```
+
+---
+
+### 5.4 发送消息
 
 ```
-POST /api/chat/send/group
+POST /api/chat/send
 ```
 
 **Request:**
 
 ```jsonc
 {
-  "groupId": 123456789,
+  "chatType": 1,
+  "parentId": 123456789,
   "message": "你好世界",
 }
 ```
 
-**Response:**
+| 字段       | 类型   | 说明                   |
+| ---------- | ------ | ---------------------- |
+| `chatType` | int    | 0=Group, 1=Private     |
+| `parentId` | long   | 群号或 QQ 号           |
+| `message`  | string | 消息文本（可含 CQ 码） |
+
+**Response (200):**
 
 ```jsonc
 {
   "code": 0,
-  "data": { "messageId": 5002 },
+  "data": { "msgId": 5002 },
 }
 ```
 
-### 5.5 发送私聊消息
-
-```
-POST /api/chat/send/private
-```
-
-**Request:**
+**Response (400):**
 
 ```jsonc
-{
-  "qqId": 987654321,
-  "message": "你好",
-}
+{ "code": 400, "message": "发送目标无效" }
+{ "code": 400, "message": "发送消息不得为空" }
+{ "code": 400, "message": "发送目标类型无效" }
+{ "code": 400, "message": "消息发送失败" }
 ```
 
-**Response:**
+---
 
-```jsonc
-{
-  "code": 0,
-  "data": { "messageId": 5003 },
-}
-```
-
-### 5.6 撤回消息
+### 5.5 好友昵称
 
 ```
-POST /api/chat/recall/{msgId}
+GET /api/chat/friend-nick?qq={qq}
 ```
 
-**Response:** `{ "code": 0, "data": null }`
-
-### 5.7 好友昵称
-
-```
-GET /api/chat/friends/{qqId}/nick
-```
-
-**Response:**
+**Response (200):**
 
 ```jsonc
 {
@@ -850,35 +895,49 @@ GET /api/chat/friends/{qqId}/nick
 }
 ```
 
-### 5.8 群名称
+---
+
+### 5.6 群名称
 
 ```
-GET /api/chat/groups/{groupId}/name
+GET /api/chat/group-name?groupId={groupId}
 ```
 
-**Response:**
+**Response (200):**
 
 ```jsonc
 {
   "code": 0,
-  "data": { "name": "群名称" },
+  "data": { "groupName": "群名称" },
 }
 ```
 
-### 5.9 群成员昵称
+---
+
+### 5.7 群成员名片
 
 ```
-GET /api/chat/groups/{groupId}/members/{qqId}/nick
+GET /api/chat/group-member-card?groupId={groupId}&qq={qq}
 ```
 
-**Response:**
+**Response (200):**
 
 ```jsonc
 {
   "code": 0,
-  "data": { "nick": "群名片或昵称" },
+  "data": { "card": "群名片" },
 }
 ```
+
+---
+
+### 5.8 清除未读
+
+```
+POST /api/chat/clear-unread?chatHistoryType={0|1}&parentId={id}
+```
+
+**Response:** `{ "code": 0, "data": null }`
 
 ---
 
@@ -1368,10 +1427,10 @@ POST /api/config/webui
 
 **Request:**
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| `Key` | string | 配置项名：ListenIP、ListenPort、EnableHTTPS、Password、CertificatePath、CertificateKeyPath |
-| `Value` | any | 新值，类型自动适配 |
+| 参数    | 类型   | 说明                                                                                       |
+| ------- | ------ | ------------------------------------------------------------------------------------------ |
+| `Key`   | string | 配置项名：ListenIP、ListenPort、EnableHTTPS、Password、CertificatePath、CertificateKeyPath |
+| `Value` | any    | 新值，类型自动适配                                                                         |
 
 ```json
 {
@@ -1446,8 +1505,12 @@ GET /realtime?access_token={token}
   "msgId": 5001,
   "group": 123456789,
   "qq": 987654321,
-  "msg": "消息文本 (含 CQ 码)",
-  "time": "2026-05-21T12:00:00"
+  "msg": [
+    {
+      /* MessageItemBase */
+    },
+  ],
+  "time": "2026-05-21T12:00:00",
 }
 ```
 
@@ -1457,17 +1520,23 @@ GET /realtime?access_token={token}
 {
   "msgId": 5002,
   "qq": 987654321,
-  "msg": "消息文本",
-  "time": "2026-05-21T12:00:00"
+  "msg": [
+    {
+      /* MessageItemBase */
+    },
+  ],
+  "time": "2026-05-21T12:00:00",
 }
 ```
+
+> `msg` 字段为已解析的消息链（`MessageItemBase[]`），前端无需自行解析 CQ 码。消息链格式见 [附录：消息链格式](#附录消息链格式)。
 
 ### OnGroupAdded — 群成员增加
 
 ```jsonc
 {
   "group": 123456789,
-  "qq": 987654321
+  "qq": 987654321,
 }
 ```
 
@@ -1476,7 +1545,7 @@ GET /realtime?access_token={token}
 ```jsonc
 {
   "group": 123456789,
-  "qq": 987654321
+  "qq": 987654321,
 }
 ```
 
@@ -1487,7 +1556,7 @@ GET /realtime?access_token={token}
   "group": 123456789,
   "qq": 987654321,
   "operatedQQ": 111111,
-  "time": "2026-05-21T12:00:00"
+  "time": "2026-05-21T12:00:00",
 }
 ```
 
@@ -1497,7 +1566,7 @@ GET /realtime?access_token={token}
 {
   "msgId": 5001,
   "qq": 987654321,
-  "msg": "消息内容"
+  "msg": "消息内容",
 }
 ```
 
@@ -1507,7 +1576,7 @@ GET /realtime?access_token={token}
 {
   "msgId": 5002,
   "qq": 987654321,
-  "msg": "消息内容"
+  "msg": "消息内容",
 }
 ```
 
@@ -1518,7 +1587,9 @@ GET /realtime?access_token={token}
   "msgId": 5003,
   "group": 123456789,
   "msg": "消息内容",
-  "plugin": { /* PluginDto */ }
+  "plugin": {
+    /* PluginDto */
+  },
 }
 ```
 
@@ -1529,7 +1600,9 @@ GET /realtime?access_token={token}
   "msgId": 5004,
   "qq": 987654321,
   "msg": "消息内容",
-  "plugin": { /* PluginDto */ }
+  "plugin": {
+    /* PluginDto */
+  },
 }
 ```
 
@@ -1537,7 +1610,9 @@ GET /realtime?access_token={token}
 
 ```jsonc
 {
-  "plugin": { /* PluginDto */ }
+  "plugin": {
+    /* PluginDto */
+  },
 }
 ```
 
@@ -1545,7 +1620,9 @@ GET /realtime?access_token={token}
 
 ```jsonc
 {
-  "plugin": { /* PluginDto */ }
+  "plugin": {
+    /* PluginDto */
+  },
 }
 ```
 
@@ -1553,7 +1630,9 @@ GET /realtime?access_token={token}
 
 ```jsonc
 {
-  "plugin": { /* PluginDto */ }
+  "plugin": {
+    /* PluginDto */
+  },
 }
 ```
 
@@ -1561,7 +1640,9 @@ GET /realtime?access_token={token}
 
 ```jsonc
 {
-  "plugin": { /* PluginDto */ }
+  "plugin": {
+    /* PluginDto */
+  },
 }
 ```
 
@@ -1569,7 +1650,7 @@ GET /realtime?access_token={token}
 
 ```jsonc
 {
-  "name": "OneBot v11"
+  "name": "OneBot v11",
 }
 ```
 
@@ -1577,7 +1658,7 @@ GET /realtime?access_token={token}
 
 ```jsonc
 {
-  "name": "OneBot v11"
+  "name": "OneBot v11",
 }
 ```
 
@@ -1586,7 +1667,7 @@ GET /realtime?access_token={token}
 ```jsonc
 {
   "nick": "机器人昵称",
-  "qq": 123456789
+  "qq": 123456789,
 }
 ```
 
@@ -1595,7 +1676,9 @@ GET /realtime?access_token={token}
 ```jsonc
 {
   "logId": 1,
-  "log": { /* LogDto */ }
+  "log": {
+    /* LogDto */
+  },
 }
 ```
 
@@ -1604,7 +1687,7 @@ GET /realtime?access_token={token}
 ```jsonc
 {
   "logId": 1,
-  "status": "read"
+  "status": "read",
 }
 ```
 
@@ -1616,7 +1699,7 @@ GET /realtime?access_token={token}
   "memoryUsage": 45.2,
   "cpuCurrentFrequency": 3600.0,
   "usedMemoryInMB": 8192,
-  "totalMemoryInMB": 16384
+  "totalMemoryInMB": 16384,
 }
 ```
 
@@ -1629,7 +1712,168 @@ GET /realtime?access_token={token}
   "processedMessageCount": 1000,
   "sentMessageCount": 500,
   "pluginUsages": [
-    { /* DashboardPluginItem */ }
-  ]
+    {
+      /* DashboardPluginItem */
+    },
+  ],
 }
 ```
+
+---
+
+# 附录：消息链格式
+
+SignalR 的 `OnGroupMsg` 和 `OnPrivateMsg` 事件中，`msg` 字段为服务端解析后的消息链数组，每个元素继承自 `MessageItemBase`，通过 `messageItemType` 字段区分类型（值为数字）。
+
+## MessageItemType 枚举
+
+| 值  | 对应类型 | 说明                   |
+| --- | -------- | ---------------------- |
+| 0   | Unknown  | 未知（不应出现）       |
+| 1   | Face     | QQ 表情                |
+| 2   | Bface    | 大表情                 |
+| 3   | Image    | 图片                   |
+| 4   | Record   | 语音                   |
+| 5   | Video    | 视频                   |
+| 6   | At       | @提及                  |
+| 7   | Rps      | 猜拳魔法表情           |
+| 8   | Shake    | 窗口抖动               |
+| 9   | Dice     | 掷骰子                 |
+| 10  | Poke     | 戳一戳                 |
+| 11  | Rich     | 富媒体（XML/JSON/App） |
+| 12  | Reply    | 引用回复               |
+| 13  | Text     | 纯文本                 |
+
+## 公共字段
+
+```jsonc
+{
+  "messageItemType": 13, // 所有消息片段共有，值为上表中的数字
+}
+```
+
+## 各类型具体字段
+
+### Text (13) — 纯文本
+
+```jsonc
+{
+  "messageItemType": 13,
+  "content": "你好",
+}
+```
+
+### Face (1) — QQ 表情
+
+```jsonc
+{
+  "messageItemType": 1,
+  "id": 12,
+}
+```
+
+### BFace (2) — 大表情
+
+```jsonc
+{
+  "messageItemType": 2,
+  "id": 1,
+}
+```
+
+### Image (3) — 图片
+
+```jsonc
+{
+  "messageItemType": 3,
+  "hash": "abcdef123456",
+  "filePath": null,
+  "isFlash": false,
+  "isEmoji": false,
+}
+```
+
+| 字段       | 说明                                            |
+| ---------- | ----------------------------------------------- |
+| `hash`     | 缓存哈希（通过 `/api/cache/image/{hash}` 获取） |
+| `filePath` | 本地路径（非 null 时优先使用）                  |
+| `isFlash`  | 是否为闪照                                      |
+| `isEmoji`  | 是否为表情贴纸                                  |
+
+### Record (4) — 语音
+
+```jsonc
+{
+  "messageItemType": 4,
+  "hash": "abcdef123456",
+  "filePath": null,
+}
+```
+
+### At (6) — @提及
+
+```jsonc
+{
+  "messageItemType": 6,
+  "qq": 987654321,
+  "isAtAll": false,
+}
+```
+
+> `qq=0, isAtAll=true` 表示 @全体成员
+
+### Reply (12) — 引用回复
+
+```jsonc
+{
+  "messageItemType": 12,
+  "id": 5001,
+}
+```
+
+### Dice (9) — 骰子
+
+```jsonc
+{
+  "messageItemType": 9,
+  "type": 1,
+}
+```
+
+### RPS (7) — 猜拳
+
+```jsonc
+{
+  "messageItemType": 7,
+  "type": 1,
+}
+```
+
+### Shake (8) — 窗口抖动
+
+```jsonc
+{
+  "messageItemType": 8,
+}
+```
+
+### Poke (10) — 戳一戳
+
+```jsonc
+{
+  "messageItemType": 10,
+  "name": "戳一戳",
+}
+```
+
+### RichContent (11) — 富媒体
+
+```jsonc
+{
+  "messageItemType": 11,
+  "richType": "Json",
+  "content": "{\"app\":\"com.tencent...\"}",
+}
+```
+
+> `richType`: `Json` / `Xml` / `App`
