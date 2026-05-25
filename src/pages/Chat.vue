@@ -57,13 +57,15 @@ function senderDisplay(msg: { senderID: number }): string {
   return chat.getCachedNick(msg.senderID) || String(msg.senderID)
 }
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
+
 // ── Message rendering helpers ──
 function imageUrl(item: MessageItemBase): string {
   const img = item as unknown as { hash?: string; filePath?: string | null }
   const fp = img.filePath
-  if (fp) return fp.startsWith('http') ? fp : `/api/file/image/${fp}`
+  if (fp) return fp.startsWith('http') ? fp : `${API_BASE}/api/cache/image/${fp}`
   const h = img.hash
-  if (h) return `/api/file/image/${h}`
+  if (h) return `${API_BASE}/api/cache/image/${h}`
   return ''
 }
 
@@ -78,7 +80,6 @@ function isTextOnly(items: MessageItemBase[]): boolean {
 function itemText(m: MessageItemBase): string {
   return (m as unknown as { content?: string }).content ?? ''
 }
-
 
 // ── Message grouping ──
 const GROUP_WINDOW_MS = 3 * 60 * 1000 // 3 minutes
@@ -124,13 +125,15 @@ const msgGroupPos = computed<Record<number, GroupPos>>(() => {
   return map
 })
 
-function isGroupable(a: { time: string; message: MessageItemBase[] }, b: { time: string; message: MessageItemBase[] }): boolean {
+function isGroupable(
+  a: { time: string; message: MessageItemBase[] },
+  b: { time: string; message: MessageItemBase[] },
+): boolean {
   const t1 = new Date(a.time).getTime()
   const t2 = new Date(b.time).getTime()
   if (Math.abs(t2 - t1) > GROUP_WINDOW_MS) return false
   return isTextOnly(a.message) && isTextOnly(b.message)
 }
-
 
 function formatConvTime(ts: number | string) {
   if (!ts) return ''
@@ -155,17 +158,20 @@ function formatMsgTime(ts: number | string) {
 }
 
 // Scroll to bottom + prefetch nicks when messages change
-watch(() => chat.messages.length, async () => {
-  for (const msg of chat.messages) {
-    const qq = msg.senderID
-    if (!nickRequests.value.has(qq) && !chat.getCachedNick(qq)) {
-      nickRequests.value.add(qq)
-      chat.fetchNick(qq)
+watch(
+  () => chat.messages.length,
+  async () => {
+    for (const msg of chat.messages) {
+      const qq = msg.senderID
+      if (!nickRequests.value.has(qq) && !chat.getCachedNick(qq)) {
+        nickRequests.value.add(qq)
+        chat.fetchNick(qq)
+      }
     }
-  }
-  await nextTick()
-  scrollToBottom()
-})
+    await nextTick()
+    scrollToBottom()
+  },
+)
 
 onMounted(async () => {
   await chat.fetchConversations()
@@ -176,18 +182,21 @@ onMounted(async () => {
   <div class="chat-shell">
     <!-- Conversation sidebar -->
     <div class="chat-sidebar">
-      <v-card class="glass-card" height="100%" style="display: flex; flex-direction: column;">
-        <v-card-title class="text-body-1 pa-3 d-flex align-center" style="flex-shrink: 0;">
+      <v-card class="glass-card" height="100%" style="display: flex; flex-direction: column">
+        <v-card-title class="text-body-1 pa-3 d-flex align-center" style="flex-shrink: 0">
           会话
           <v-spacer />
           <v-btn
-            size="x-small" variant="text" icon="mdi-refresh"
-            :loading="chat.loading" @click="chat.fetchConversations"
+            size="x-small"
+            variant="text"
+            icon="mdi-refresh"
+            :loading="chat.loading"
+            @click="chat.fetchConversations"
           />
         </v-card-title>
         <v-divider />
 
-        <div class="conv-list" style="flex: 1; overflow-y: auto;">
+        <div class="conv-list" style="flex: 1; overflow-y: auto">
           <div
             v-for="conv in chat.conversations"
             :key="`${conv.type}-${conv.id}`"
@@ -199,7 +208,7 @@ onMounted(async () => {
               <v-img :src="convAvatar(conv)" cover />
             </v-avatar>
 
-            <div class="flex-grow-1 mx-2" style="min-width: 0;">
+            <div class="flex-grow-1 mx-2" style="min-width: 0">
               <div class="d-flex align-center">
                 <span class="conv-name text-truncate">{{ conv.name || conv.parentID }}</span>
                 <v-spacer />
@@ -233,19 +242,24 @@ onMounted(async () => {
 
     <!-- Message area -->
     <div class="chat-main">
-      <v-card class="glass-card" height="100%" style="display: flex; flex-direction: column;">
+      <v-card class="glass-card" height="100%" style="display: flex; flex-direction: column">
         <!-- Header -->
-        <div v-if="chat.currentChat" class="pa-3 d-flex align-center" style="flex-shrink: 0;">
+        <div v-if="chat.currentChat" class="pa-3 d-flex align-center" style="flex-shrink: 0">
           <v-avatar size="36" class="mr-2">
             <v-img
-              :src="chat.currentChat.type === ChatHistoryType.Group
-                ? groupAvatar(chat.currentChat.parentId)
-                : privateAvatar(chat.currentChat.parentId)"
+              :src="
+                chat.currentChat.type === ChatHistoryType.Group
+                  ? groupAvatar(chat.currentChat.parentId)
+                  : privateAvatar(chat.currentChat.parentId)
+              "
               cover
             />
           </v-avatar>
           <span class="text-body-2 font-weight-medium">
-            {{ chat.conversations.find(c => c.parentID === chat.currentChat?.parentId)?.name || chat.currentChat?.parentId }}
+            {{
+              chat.conversations.find((c) => c.parentID === chat.currentChat?.parentId)?.name ||
+              chat.currentChat?.parentId
+            }}
           </span>
         </div>
         <v-divider v-if="chat.currentChat" />
@@ -256,39 +270,53 @@ onMounted(async () => {
             <v-progress-circular indeterminate size="24" width="2" color="primary" />
           </div>
 
-          <div v-if="!chat.currentChat" class="d-flex flex-column align-center justify-center" style="height: 100%;">
+          <div
+            v-if="!chat.currentChat"
+            class="d-flex flex-column align-center justify-center"
+            style="height: 100%"
+          >
             <v-icon icon="mdi-chat-outline" size="64" class="text-medium-emphasis mb-3" />
             <div class="text-body-1 text-medium-emphasis">选择一个会话开始聊天</div>
           </div>
 
           <template v-else>
-            <div v-if="chat.messages.length === 0 && !chat.msgLoading" class="text-center text-medium-emphasis pa-8">
+            <div
+              v-if="chat.messages.length === 0 && !chat.msgLoading"
+              class="text-center text-medium-emphasis pa-8"
+            >
               <div class="text-caption">暂无消息</div>
             </div>
 
             <template v-for="(msg, idx) in chat.messages" :key="msg.id || msg.msgId">
               <div
-                :class="['msg-row', msgGroupPos[msg.id || msg.msgId] === 'first' || !msgGroupPos[msg.id || msg.msgId] ? 'msg-row-gap' : '']"
+                :class="[
+                  'msg-row',
+                  msgGroupPos[msg.id || msg.msgId] === 'first' || !msgGroupPos[msg.id || msg.msgId]
+                    ? 'msg-row-gap'
+                    : '',
+                ]"
               >
                 <div class="d-flex align-start">
                   <!-- Avatar: hidden for middle/last -->
                   <v-avatar
-                    v-if="!msgGroupPos[msg.id || msg.msgId] || msgGroupPos[msg.id || msg.msgId] === 'first'"
+                    v-if="
+                      !msgGroupPos[msg.id || msg.msgId] ||
+                      msgGroupPos[msg.id || msg.msgId] === 'first'
+                    "
                     size="32"
                     class="mr-2 flex-shrink-0"
                   >
                     <v-img :src="senderAvatar(msg.senderID)" cover />
                   </v-avatar>
-                  <div
-                    v-else
-                    class="flex-shrink-0 mr-2"
-                    style="width: 32px;"
-                  />
+                  <div v-else class="flex-shrink-0 mr-2" style="width: 32px" />
 
-                  <div class="flex-grow-1" style="min-width: 0;">
+                  <div class="flex-grow-1" style="min-width: 0">
                     <!-- Sender name: hidden for middle/last -->
                     <div
-                      v-if="!msgGroupPos[msg.id || msg.msgId] || msgGroupPos[msg.id || msg.msgId] === 'first'"
+                      v-if="
+                        !msgGroupPos[msg.id || msg.msgId] ||
+                        msgGroupPos[msg.id || msg.msgId] === 'first'
+                      "
                       class="d-flex align-center ga-1 mb-1"
                     >
                       <span class="msg-sender text-medium-emphasis">{{ senderDisplay(msg) }}</span>
@@ -298,16 +326,34 @@ onMounted(async () => {
                       <!-- Pure image: no bubble frame -->
                       <template v-if="isPureImage(msg.message)">
                         <div
-                          v-for="(item, ii) in msg.message" :key="ii"
-                          :class="['msg-image-pure', msgGroupPos[msg.id || msg.msgId] ? `msg-bubble--${msgGroupPos[msg.id || msg.msgId]}` : '']"
+                          v-for="(item, ii) in msg.message"
+                          :key="ii"
+                          :class="[
+                            'msg-image-pure',
+                            msgGroupPos[msg.id || msg.msgId]
+                              ? `msg-bubble--${msgGroupPos[msg.id || msg.msgId]}`
+                              : '',
+                          ]"
                         >
                           <img :src="imageUrl(item)" class="msg-image-inline" loading="lazy" />
                         </div>
                       </template>
                       <!-- Mixed content: inside bubble -->
-                      <div v-else :class="['msg-bubble', msgGroupPos[msg.id || msg.msgId] ? `msg-bubble--${msgGroupPos[msg.id || msg.msgId]}` : '']">
+                      <div
+                        v-else
+                        :class="[
+                          'msg-bubble',
+                          msgGroupPos[msg.id || msg.msgId]
+                            ? `msg-bubble--${msgGroupPos[msg.id || msg.msgId]}`
+                            : '',
+                        ]"
+                      >
                         <template v-for="(item, si) in msg.message" :key="si">
-                          <span v-if="item.messageItemType === MessageItemType.Text" class="msg-text-block">{{ itemText(item) }}</span>
+                          <span
+                            v-if="item.messageItemType === MessageItemType.Text"
+                            class="msg-text-block"
+                            >{{ itemText(item) }}</span
+                          >
                           <img
                             v-else-if="item.messageItemType === MessageItemType.Image"
                             :src="imageUrl(item)"
@@ -318,9 +364,13 @@ onMounted(async () => {
                         </template>
                       </div>
                       <span
-                        v-if="msgGroupPos[msg.id || msg.msgId] && msgGroupPos[msg.id || msg.msgId] !== 'first'"
+                        v-if="
+                          msgGroupPos[msg.id || msg.msgId] &&
+                          msgGroupPos[msg.id || msg.msgId] !== 'first'
+                        "
                         class="msg-group-time"
-                      >{{ formatMsgTime(msg.time) }}</span>
+                        >{{ formatMsgTime(msg.time) }}</span
+                      >
                     </div>
                   </div>
                 </div>
@@ -330,7 +380,7 @@ onMounted(async () => {
         </div>
 
         <!-- Input -->
-        <div v-if="chat.currentChat" class="pa-3" style="flex-shrink: 0;">
+        <div v-if="chat.currentChat" class="pa-3" style="flex-shrink: 0">
           <v-divider class="mb-3" />
           <div class="d-flex ga-2">
             <v-text-field
@@ -372,8 +422,14 @@ onMounted(async () => {
 .msg-scroll {
   overflow-y: auto;
 }
-.msg-text-block { display: block; }
-.msg-misc-inline { display: block; color: rgba(var(--v-theme-on-surface), 0.5); font-size: 0.8em; }
+.msg-text-block {
+  display: block;
+}
+.msg-misc-inline {
+  display: block;
+  color: rgba(var(--v-theme-on-surface), 0.5);
+  font-size: 0.8em;
+}
 
 .msg-image-inline {
   max-width: 240px;
@@ -388,9 +444,16 @@ onMounted(async () => {
   overflow: hidden;
   display: inline-block;
 }
-.msg-image-pure.msg-bubble--first { border-bottom-left-radius: 2px; }
-.msg-image-pure.msg-bubble--middle { border-top-left-radius: 2px; border-bottom-left-radius: 2px; }
-.msg-image-pure.msg-bubble--last { border-top-left-radius: 2px; }
+.msg-image-pure.msg-bubble--first {
+  border-bottom-left-radius: 2px;
+}
+.msg-image-pure.msg-bubble--middle {
+  border-top-left-radius: 2px;
+  border-bottom-left-radius: 2px;
+}
+.msg-image-pure.msg-bubble--last {
+  border-top-left-radius: 2px;
+}
 
 .msg-bubble {
   background: rgba(var(--v-theme-on-surface), 0.05);
@@ -467,12 +530,25 @@ onMounted(async () => {
   line-height: 1;
 }
 
-.msg-sender { font-size: 0.7rem; }
-.msg-time { font-size: 0.65rem; color: rgba(var(--v-theme-on-surface), 0.4); }
+.msg-sender {
+  font-size: 0.7rem;
+}
+.msg-time {
+  font-size: 0.65rem;
+  color: rgba(var(--v-theme-on-surface), 0.4);
+}
 
-.conv-name { font-weight: 500; }
-.conv-time { font-size: 0.65rem; color: rgba(var(--v-theme-on-surface), 0.45); }
-.conv-preview { font-size: 0.72rem; color: rgba(var(--v-theme-on-surface), 0.55); }
+.conv-name {
+  font-weight: 500;
+}
+.conv-time {
+  font-size: 0.65rem;
+  color: rgba(var(--v-theme-on-surface), 0.45);
+}
+.conv-preview {
+  font-size: 0.72rem;
+  color: rgba(var(--v-theme-on-surface), 0.55);
+}
 
 .text-truncate {
   overflow: hidden;
