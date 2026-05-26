@@ -239,8 +239,8 @@ GET /api/plugin
       "description": "R!!",
       "version": "2.0.0",
       "auth": [
-        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
-        150, 151, 160, 161, 162, 180,
+        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128,
+        130, 131, 132, 140, 150, 151, 160, 161, 162, 180,
       ],
     },
   ],
@@ -420,8 +420,8 @@ POST /api/plugin/{authCode}/reload
     "description": "R!!",
     "version": "2.0.0",
     "auth": [
-      20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
-      150, 151, 160, 161, 162, 180
+      20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128,
+      130, 131, 132, 140, 150, 151, 160, 161, 162, 180
     ]
   },
   "message": null
@@ -479,8 +479,8 @@ POST /api/plugin/reload-all
       "description": "R!!",
       "version": "2.0.0",
       "auth": [
-        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
-        150, 151, 160, 161, 162, 180
+        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128,
+        130, 131, 132, 140, 150, 151, 160, 161, 162, 180
       ]
     }
   ],
@@ -503,7 +503,13 @@ GET /api/protocol/list
 ```jsonc
 {
   "code": 0,
-  "data": ["MiraiAPIHttp", "Lagrange.Core", "NoConnection", "OneBot v11", "Satori v1"],
+  "data": [
+    "MiraiAPIHttp",
+    "Lagrange.Core",
+    "NoConnection",
+    "OneBot v11",
+    "Satori v1",
+  ],
   "message": null,
 }
 ```
@@ -1413,6 +1419,24 @@ GET /api/config/webui
       "description": "HTTPS 证书密钥文件的存放路径",
       "type": "String",
       "value": ""
+    },
+    "EnableChat": {
+      "title": "",
+      "description": "",
+      "type": "Boolean",
+      "value": true
+    },
+    "EnableFileManager": {
+      "title": "",
+      "description": "",
+      "type": "Boolean",
+      "value": false
+    },
+    "EnableTerminal": {
+      "title": "",
+      "description": "",
+      "type": "Boolean",
+      "value": false
     }
   },
   "message": null
@@ -1770,18 +1794,26 @@ SignalR 的 `OnGroupMsg` 和 `OnPrivateMsg` 事件中，`msg` 字段为服务端
 ```jsonc
 {
   "messageItemType": 1,
-  "id": 12,
+  "faceId": 12,
 }
 ```
+
+| 字段     | 说明     |
+| -------- | -------- |
+| `faceId` | QQ 表情 ID（对应 CQFace 枚举） |
 
 ### BFace (2) — 大表情
 
 ```jsonc
 {
   "messageItemType": 2,
-  "id": 1,
+  "faceId": 1,
 }
 ```
+
+| 字段     | 说明         |
+| -------- | ------------ |
+| `faceId` | 原创表情 ID |
 
 ### Image (3) — 图片
 
@@ -1817,12 +1849,15 @@ SignalR 的 `OnGroupMsg` 和 `OnPrivateMsg` 事件中，`msg` 字段为服务端
 ```jsonc
 {
   "messageItemType": 6,
-  "qq": 987654321,
-  "isAtAll": false,
+  "target": 987654321,
+  "allTarget": false,
 }
 ```
 
-> `qq=0, isAtAll=true` 表示 @全体成员
+| 字段        | 说明                            |
+| ----------- | ------------------------------- |
+| `target`    | 目标 QQ 号                      |
+| `allTarget` | 是否 @全体成员（此时 target 为 0） |
 
 ### Reply (12) — 引用回复
 
@@ -1838,18 +1873,26 @@ SignalR 的 `OnGroupMsg` 和 `OnPrivateMsg` 事件中，`msg` 字段为服务端
 ```jsonc
 {
   "messageItemType": 9,
-  "type": 1,
+  "point": 1,
 }
 ```
+
+| 字段    | 说明       |
+| ------- | ---------- |
+| `point` | 骰子点数（1-6） |
 
 ### RPS (7) — 猜拳
 
 ```jsonc
 {
   "messageItemType": 7,
-  "type": 1,
+  "rpsType": 1,
 }
 ```
+
+| 字段      | 说明                        |
+| --------- | --------------------------- |
+| `rpsType` | 猜拳类型：1=石头，2=剪刀，3=布 |
 
 ### Shake (8) — 窗口抖动
 
@@ -1864,18 +1907,25 @@ SignalR 的 `OnGroupMsg` 和 `OnPrivateMsg` 事件中，`msg` 字段为服务端
 ```jsonc
 {
   "messageItemType": 10,
-  "name": "戳一戳",
+  "action": "戳一戳",
 }
 ```
+
+| 字段     | 说明           |
+| -------- | -------------- |
+| `action` | 戳一戳动作名称 |
 
 ### RichContent (11) — 富媒体
 
 ```jsonc
 {
   "messageItemType": 11,
-  "richType": "Json",
+  "richContentType": "Json",
   "content": "{\"app\":\"com.tencent...\"}",
 }
 ```
 
-> `richType`: `Json` / `Xml` / `App`
+| 字段               | 说明                           |
+| ------------------ | ------------------------------ |
+| `richContentType`  | 类型：`Json` / `Xml` / `App`   |
+| `content`          | 卡片内容字符串                  |
