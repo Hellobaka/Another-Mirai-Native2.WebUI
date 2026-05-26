@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
+import { getApiBaseUrl } from './baseUrl'
 
 function token(): string {
   return localStorage.getItem('amn_token') || ''
@@ -10,6 +10,7 @@ export function cacheUrl(type: 'image' | 'record' | 'video', file: string): stri
     const sep = file.includes('?') ? '&' : '?'
     return `${file}${sep}access_token=${token()}`
   }
+  const base = getApiBaseUrl()
   const sep = '?'
-  return `${API_BASE}/api/cache/${type}/${file}${sep}access_token=${token()}`
+  return `${base}/api/cache/${type}/${file}${sep}access_token=${token()}`
 }

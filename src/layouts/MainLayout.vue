@@ -7,10 +7,12 @@ import { useAppStore } from '@/stores/app'
 import { useNotifyStore } from '@/stores/notify'
 import { useHubStore } from '@/stores/hub'
 import { useChatStore } from '@/stores/chat'
+import { useSettingsStore } from '@/stores/settings'
 import { getBaseInformation } from '@/api/dashboard'
 import { SignalREvents } from '@/signalr/events'
 import type { CurrentBotInfoChangedPayload, LogAddedPayload } from '@/models'
 import { LogLevel } from '@/models'
+import SettingsModal from '@/components/SettingsModal.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -18,6 +20,7 @@ const app = useAppStore()
 const notify = useNotifyStore()
 const hub = useHubStore()
 const chat = useChatStore()
+const settings = useSettingsStore()
 const display = useDisplay()
 
 const isMobile = computed(() => display.smAndDown.value)
@@ -161,6 +164,7 @@ onUnmounted(() => {
       <v-app-bar-title>{{ app.pageTitle }}</v-app-bar-title>
 
       <template #append>
+        <v-btn icon="mdi-cog" variant="text" size="small" @click="settings.openModal()" />
         <v-btn icon variant="text" size="small" @click="app.toggleTheme()">
           <v-icon :icon="app.themeMode === 'dark' ? 'mdi-weather-night' : app.themeMode === 'light' ? 'mdi-weather-sunny' : 'mdi-theme-light-dark'" />
           <v-tooltip activator="parent" location="bottom">
@@ -267,6 +271,8 @@ onUnmounted(() => {
         </v-card>
       </v-fade-transition>
     </div>
+
+    <SettingsModal />
   </v-layout>
 </template>
 

@@ -5,6 +5,7 @@ import {
   LogLevel,
 } from '@microsoft/signalr'
 import { ref } from 'vue'
+import { getApiBaseUrl } from '@/api/baseUrl'
 
 export type HubStatus = 'connected' | 'reconnecting' | 'disconnected'
 
@@ -26,8 +27,9 @@ export async function startConnection(token: string): Promise<HubConnection> {
     connection = null
   }
 
+  const baseUrl = getApiBaseUrl() || import.meta.env.VITE_HUB_BASE_URL || ''
   connection = new HubConnectionBuilder()
-    .withUrl(`${import.meta.env.VITE_HUB_BASE_URL ?? ''}/realtime?access_token=${token}`)
+    .withUrl(`${baseUrl}/realtime?access_token=${token}`)
     .configureLogging(LogLevel.Warning)
     .withAutomaticReconnect()
     .build()

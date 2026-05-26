@@ -2,10 +2,13 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
 import { getErrorMessage } from '@/api/client'
+import SettingsModal from '@/components/SettingsModal.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
+const settings = useSettingsStore()
 
 const password = ref('')
 const loading = ref(false)
@@ -29,6 +32,15 @@ async function handleLogin() {
 <template>
   <div class="login-bg fill-height d-flex align-center justify-center">
     <v-card class="glass-card pa-8 login-card" max-width="420" width="100%">
+      <div class="login-card-header">
+        <v-btn
+          icon="mdi-cog"
+          variant="text"
+          size="small"
+          class="login-settings-btn"
+          @click="settings.openModal()"
+        />
+      </div>
       <div class="text-center mb-6">
         <div class="text-h5 font-weight-bold mt-1">
           Another-Mirai-Native2
@@ -54,6 +66,8 @@ async function handleLogin() {
         登录
       </v-btn>
     </v-card>
+
+    <SettingsModal />
   </div>
 </template>
 
@@ -62,7 +76,22 @@ async function handleLogin() {
   background: radial-gradient(ellipse at 50% 40%, rgba(var(--v-theme-primary), 0.07) 0%, transparent 65%);
 }
 
+.login-card-header {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.login-settings-btn {
+  opacity: 0.45;
+  transition: opacity 0.2s;
+}
+.login-settings-btn:hover {
+  opacity: 1;
+}
+
 .login-card {
+  position: relative;
   backdrop-filter: blur(32px);
   border: 1px solid rgba(var(--v-theme-primary), 0.45) !important;
   box-shadow:

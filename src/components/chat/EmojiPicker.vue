@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { getApiBaseUrl } from '@/api/baseUrl'
 
 const props = defineProps<{
   collectedImages: string[]
@@ -57,7 +58,6 @@ function insertCollected(name: string) {
   emit('insertCollected', `collected/${name}`)
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
 function authToken() {
   return localStorage.getItem('amn_token') || ''
 }
@@ -96,7 +96,7 @@ function authToken() {
               @click="insertCollected(img)"
             >
               <v-img
-                :src="`${API_BASE}/external/image/collected/${img}?access_token=${authToken()}`"
+                :src="`${getApiBaseUrl()}/external/image/collected/${img}?access_token=${authToken()}`"
                 width="80"
                 height="80"
                 cover

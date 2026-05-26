@@ -1,10 +1,16 @@
 import axios from 'axios'
+import { getApiBaseUrl } from './baseUrl'
 
 const TOKEN_KEY = 'amn_token'
 const EXPIRES_KEY = 'amn_expires'
 
+function resolveBaseURL(): string {
+  const base = getApiBaseUrl()
+  return base ? `${base}/api` : '/api'
+}
+
 const http = axios.create({
-  baseURL: '/api',
+  baseURL: resolveBaseURL(),
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 })
