@@ -4,7 +4,7 @@ import { getConversations, getHistory, sendMessage, getFriendNick, getGroupName,
 import { useHubStore } from './hub'
 import { SignalREvents } from '@/signalr/events'
 import { ChatHistoryType } from '@/models'
-import type { ChatConversation, ChatMessage, SendMessageRequest, GroupMsgPayload, PrivateMsgPayload, MessageItemBase } from '@/models'
+import type { ChatConversation, ChatMessage, SendMessageRequest, GroupMsgPayload, PrivateMsgPayload, MsgRecallPayload, MessageItemBase } from '@/models'
 
 export const useChatStore = defineStore('chat', () => {
   const conversations = ref<ChatConversation[]>([])
@@ -68,6 +68,7 @@ export const useChatStore = defineStore('chat', () => {
       if (m.messageItemType === 4) return '[语音]'
       if (m.messageItemType === 1 || m.messageItemType === 2) return '[表情]'
       if (m.messageItemType === 6) return '@' + String((m as Record<string, unknown>).target ?? '')
+      if (m.messageItemType === 14) return `[文件] ${String((m as Record<string, unknown>).fileName ?? '')}`
       return ''
     }).filter(Boolean).join('') || '[消息]'
   }
@@ -289,6 +290,18 @@ export const useChatStore = defineStore('chat', () => {
       ChatHistoryType.Private,
       data.qq,
     )
+  })
+
+  function markRecalled(msgId: number) {
+    const msg = messages.value.find((m) => m.msgId === msgId)
+    if (msg) msg.recalled = true
+  }
+
+  hub.on(SignalREvents.OnGroupMsgRecall, (data: MsgRecallPayload) => {
+    markRecalled(data.msgId)
+  })
+  hub.on(SignalREvents.OnPrivateMsgRecall, (data: MsgRecallPayload) => {
+    markRecalled(data.msgId)
   })
 
   return {

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { getWebUIConfig } from '@/api/config'
 
 type ThemeMode = 'light' | 'dark' | 'auto'
 
@@ -21,6 +22,12 @@ export const useAppStore = defineStore('app', () => {
   const drawerOpen = ref(true)
   const rail = ref(false)
   const pageTitle = ref('')
+
+  // WebUI feature flags
+  const enableChat = ref(true)
+  const enableFileManager = ref(false)
+  const enableTerminal = ref(false)
+  const webuiConfigLoaded = ref(false)
 
   // Follow system preference changes
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
@@ -49,5 +56,23 @@ export const useAppStore = defineStore('app', () => {
     pageTitle.value = title
   }
 
-  return { themeMode, effectiveTheme, drawerOpen, rail, pageTitle, toggleTheme, toggleDrawer, toggleRail, setPageTitle }
+  async function fetchWebUIConfig() {
+    if (webuiConfigLoaded.value) return
+    try {
+      const res = await getWebUIConfig()
+      if (res.data.code === 0) {
+        const cfg = res.data.data
+        enableChat.value = cfg.EnableChat?.value !== false
+        enableFileManager.value = cfg.EnableFileManager?.value === true
+        enableTerminal.value = cfg.EnableTerminal?.value === true
+        webuiConfigLoaded.value = true
+      }
+    } catch { /* keep defaults */ }
+  }
+
+  return {
+    themeMode, effectiveTheme, drawerOpen, rail, pageTitle,
+    enableChat, enableFileManager, enableTerminal, webuiConfigLoaded,
+    toggleTheme, toggleDrawer, toggleRail, setPageTitle, fetchWebUIConfig,
+  }
 })

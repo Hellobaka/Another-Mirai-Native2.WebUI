@@ -7,7 +7,7 @@ defineProps<{
 }>()
 
 function faceUrl(id: number) {
-  return `https://qzonestyle.gtimg.cn/qzone/em/e${id}.gif`
+  return `/qq-face/${id}.png`
 }
 </script>
 

@@ -22,6 +22,7 @@ export {
   type RpsItem,
   type ShakeItem,
   type PokeItem,
+  type FileItem,
   type MessageItem,
   ChatHistoryType,
   type ChatHistoryTypeValue,

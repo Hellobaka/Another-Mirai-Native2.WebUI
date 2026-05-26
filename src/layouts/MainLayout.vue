@@ -56,14 +56,21 @@ function onLogAlert(data: LogAddedPayload) {
   notify.show(log.detail ? log.detail.slice(0, 100) : '', severity)
 }
 
-const navItems = [
-  { title: '仪表盘', icon: 'mdi-view-dashboard', to: '/dashboard' },
-  { title: '插件管理', icon: 'mdi-puzzle', to: '/plugins' },
-  { title: '日志', icon: 'mdi-text-box-outline', to: '/logs' },
-  { title: '聊天', icon: 'mdi-chat', to: '/chat' },
-  { title: '协议管理', icon: 'mdi-power-plug', to: '/protocol' },
-  { title: '设置', icon: 'mdi-cog', to: '/settings' },
-]
+const navItems = computed(() => {
+  const items = [
+    { title: '仪表盘', icon: 'mdi-view-dashboard', to: '/dashboard' },
+    { title: '插件管理', icon: 'mdi-puzzle', to: '/plugins' },
+    { title: '日志', icon: 'mdi-text-box-outline', to: '/logs' },
+  ]
+  if (app.enableChat) items.push({ title: '聊天', icon: 'mdi-chat', to: '/chat' })
+  if (app.enableFileManager) items.push({ title: '文件管理', icon: 'mdi-folder-outline', to: '/files' })
+  if (app.enableTerminal) items.push({ title: '终端', icon: 'mdi-console', to: '/terminal' })
+  items.push(
+    { title: '协议管理', icon: 'mdi-power-plug', to: '/protocol' },
+    { title: '设置', icon: 'mdi-cog', to: '/settings' },
+  )
+  return items
+})
 
 function logout() {
   notify.clear()
@@ -79,6 +86,7 @@ function closeOnMobile() {
 const APP_VERSION = '1.0.0'
 
 onMounted(async () => {
+  app.fetchWebUIConfig()
   fetchBotInfo()
   hub.on(SignalREvents.CurrentBotInfoChanged, onBotInfoChanged)
   hub.on(SignalREvents.LogAdded, onLogAlert)

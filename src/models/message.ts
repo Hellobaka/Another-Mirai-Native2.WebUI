@@ -15,6 +15,7 @@ export const MessageItemType = {
   Rich: 11,
   Reply: 12,
   Text: 13,
+  File: 14,
 } as const
 
 export type MessageItemTypeValue = (typeof MessageItemType)[keyof typeof MessageItemType]
@@ -63,6 +64,12 @@ export interface ReplyItem extends MessageItemBase {
   id: number
 }
 
+export interface FileItem extends MessageItemBase {
+  messageItemType: typeof MessageItemType.File
+  fileName: string
+  fileSize: number
+}
+
 export interface DiceItem extends MessageItemBase {
   messageItemType: typeof MessageItemType.Dice
   point: number
@@ -93,6 +100,7 @@ export type MessageItem =
   | RpsItem
   | ShakeItem
   | PokeItem
+  | FileItem
   | MessageItemBase
 
 // ChatHistoryType enum
