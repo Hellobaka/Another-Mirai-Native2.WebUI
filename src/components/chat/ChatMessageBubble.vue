@@ -125,13 +125,17 @@ function getTempId(): string {
               ]"
               @contextmenu="onContextMenu"
             >
-              <img
-                v-if="item.messageItemType === MessageItemType.Image"
-                :src="mediaUrl(item, 'image')"
-                class="msg-image-inline"
-                loading="lazy"
-                @click="emit('open-viewer', mediaUrl(item, 'image'))"
-              />
+              <template v-if="item.messageItemType === MessageItemType.Image">
+                <img
+                  :src="mediaUrl(item, 'image')"
+                  class="msg-image-inline"
+                  loading="lazy"
+                  @click="emit('open-viewer', mediaUrl(item, 'image'))"
+                />
+                <div v-if="msg.recalled" class="recall-overlay">
+                  <span class="recall-text">已撤回</span>
+                </div>
+              </template>
               <audio
                 v-else-if="item.messageItemType === MessageItemType.Record"
                 :src="mediaUrl(item, 'record')"
@@ -301,7 +305,38 @@ function getTempId(): string {
 .msg-image-pure.msg-image-pure--self-first { border-bottom-right-radius: 2px; }
 .msg-image-pure.msg-image-pure--self-middle { border-top-right-radius: 2px; border-bottom-right-radius: 2px; }
 .msg-image-pure.msg-image-pure--self-last { border-top-right-radius: 2px; }
-.msg-image-pure--recalled { opacity: 0.55; }
+.msg-image-pure--recalled {
+  position: relative;
+}
+.msg-image-pure--recalled .msg-image-inline {
+  filter: blur(12px);
+  opacity: 0.6;
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+.msg-image-pure--recalled:hover .msg-image-inline {
+  filter: blur(0);
+  opacity: 1;
+}
+.recall-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.msg-image-pure--recalled:hover .recall-overlay {
+  opacity: 0;
+}
+.recall-text {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 3px 10px;
+  border-radius: 6px;
+}
 .msg-image-inline {
   max-width: 100%;
   max-height: 320px;
