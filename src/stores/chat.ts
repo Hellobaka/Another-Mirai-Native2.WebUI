@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getConversations, getHistory, sendMessage, getFriendNick, getGroupName } from '@/api/chat'
+import { getConversations, getHistory, sendMessage, getFriendNick, getGroupName, clearUnread as clearUnreadApi } from '@/api/chat'
 import { useHubStore } from './hub'
 import { SignalREvents } from '@/signalr/events'
 import { ChatHistoryType } from '@/models'
@@ -67,7 +67,7 @@ export const useChatStore = defineStore('chat', () => {
       if (m.messageItemType === 3) return '[图片]'
       if (m.messageItemType === 4) return '[语音]'
       if (m.messageItemType === 1 || m.messageItemType === 2) return '[表情]'
-      if (m.messageItemType === 6) return '@' + String(m.qq ?? '')
+      if (m.messageItemType === 6) return '@' + String((m as Record<string, unknown>).target ?? '')
       return ''
     }).filter(Boolean).join('') || '[消息]'
   }
@@ -161,7 +161,7 @@ export const useChatStore = defineStore('chat', () => {
         } else {
           messages.value = [...res.data.data, ...messages.value]
         }
-        hasMore.value = items.length >= 50
+        hasMore.value = res.data.data.length >= 50
       }
     } finally {
       msgLoading.value = false
@@ -171,8 +171,11 @@ export const useChatStore = defineStore('chat', () => {
   function selectConversation(conv: ChatConversation) {
     currentChat.value = { type: conv.type, parentId: conv.parentID }
     fetchMessages(conv.type, conv.parentID)
-    conv.unreadCount = 0
-    flushUnreadToCache()
+    if (conv.unreadCount > 0) {
+      conv.unreadCount = 0
+      flushUnreadToCache()
+      clearUnreadApi(conv.type, conv.parentID).catch(() => { /* fire and forget */ })
+    }
   }
 
   function closeConversation() {
@@ -205,12 +208,11 @@ export const useChatStore = defineStore('chat', () => {
     )
     if (!conv) {
       conv = {
-        id: 0,
         parentID: parentId,
         senderID,
         type: chatType,
         name: '',
-        time: 0,
+        time: '',
         message: [],
         unreadCount: 0,
         isPinned: false,
@@ -233,6 +235,7 @@ export const useChatStore = defineStore('chat', () => {
   function clearUnread(conv: ChatConversation) {
     conv.unreadCount = 0
     flushUnreadToCache()
+    clearUnreadApi(conv.type, conv.parentID).catch(() => { /* fire and forget */ })
   }
 
   function appendRealTimeMessage(item: ChatMessage, chatType: number, parentId: number) {
@@ -292,6 +295,6 @@ export const useChatStore = defineStore('chat', () => {
     conversations, messages, currentChat, loading, msgLoading,
     sending, hasMore, currentChatType, convPreview,
     fetchConversations, fetchMessages, selectConversation, closeConversation,
-    sendMsg, clearUnread, setBotQQ, getCachedNick, fetchNick,
+    sendMsg, clearUnread, botQQ, setBotQQ, getCachedNick, fetchNick,
   }
 })

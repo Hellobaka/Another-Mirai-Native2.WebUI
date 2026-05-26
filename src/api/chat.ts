@@ -27,3 +27,15 @@ export function getFriendNick(qq: number) {
 export function getGroupName(groupId: number) {
   return http.get<ApiResponse<{ groupName: string }>>(`/chat/group-name?groupId=${groupId}`)
 }
+
+export function getMessage(chatHistoryType: number, parentId: number, messageId: number) {
+  return http.get<ApiResponse<ChatMessage>>(
+    `/chat/message?chatHistoryType=${chatHistoryType}&parentId=${parentId}&messageId=${messageId}`,
+  )
+}
+
+export function clearUnread(chatHistoryType: number, parentId: number) {
+  return http.post<ApiResponse<null>>(
+    `/chat/clear-unread?chatHistoryType=${chatHistoryType}&parentId=${parentId}`,
+  )
+}

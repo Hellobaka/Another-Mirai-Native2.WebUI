@@ -1,8 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import http from '@/api/client'
-import { refresh } from '@/api/auth'
-import type { LoginRequest, LoginResponseData } from '@/models'
+import { login as loginApi, refresh } from '@/api/auth'
 
 const TOKEN_KEY = 'amn_token'
 const EXPIRES_KEY = 'amn_expires'
@@ -21,10 +19,7 @@ export const useAuthStore = defineStore('auth', () => {
   )
 
   async function login(password: string): Promise<void> {
-    const { data } = await http.post<{
-      code: number
-      data: LoginResponseData
-    }>('/auth/login', { password } as LoginRequest)
+    const { data } = await loginApi(password)
 
     if (data.code !== 0) throw new Error(data.message ?? '登录失败')
 

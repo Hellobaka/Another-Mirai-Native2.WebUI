@@ -239,7 +239,7 @@ onUnmounted(() => {
               class="mr-2"
               size="20"
             />
-            <span class="text-body-2 flex-grow-1">{{ n.message }}</span>
+            <span class="text-body-2 flex-grow-1 snackbar-msg">{{ n.message }}</span>
             <v-btn
               variant="text"
               icon="mdi-close"
@@ -276,6 +276,13 @@ onUnmounted(() => {
 .snackbar-item {
   min-width: 300px;
   backdrop-filter: blur(12px);
+}
+.snackbar-msg {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+  max-height: 120px;
+  overflow-y: auto;
 }
 
 /* ── Footer ── */

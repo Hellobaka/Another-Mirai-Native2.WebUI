@@ -18,7 +18,7 @@ function faceUrl(id: number) {
 
   <img
     v-else-if="item.messageItemType === MessageItemType.Face"
-    :src="faceUrl((item as { id: number }).id)"
+    :src="faceUrl((item as { faceId: number }).faceId)"
     class="msg-face"
     :alt="`[表情]`"
   />
@@ -29,7 +29,7 @@ function faceUrl(id: number) {
   </span>
 
   <span v-else-if="item.messageItemType === MessageItemType.At" class="msg-at">
-    @{{ (item as { qq: number; isAtAll: boolean }).isAtAll ? '全体成员' : (item as { qq: number }).qq }}
+    @{{ (item as { target: number; allTarget: boolean }).allTarget ? '全体成员' : (item as { target: number }).target }}
   </span>
 
   <span v-else-if="item.messageItemType === MessageItemType.Reply" class="msg-reply">

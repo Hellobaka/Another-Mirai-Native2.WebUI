@@ -30,12 +30,12 @@ export interface TextItem extends MessageItemBase {
 
 export interface FaceItem extends MessageItemBase {
   messageItemType: typeof MessageItemType.Face
-  id: number
+  faceId: number
 }
 
 export interface BFaceItem extends MessageItemBase {
   messageItemType: typeof MessageItemType.Bface
-  id: number
+  faceId: number
 }
 
 export interface ImageItem extends MessageItemBase {
@@ -54,8 +54,8 @@ export interface RecordItem extends MessageItemBase {
 
 export interface AtItem extends MessageItemBase {
   messageItemType: typeof MessageItemType.At
-  qq: number
-  isAtAll: boolean
+  target: number
+  allTarget: boolean
 }
 
 export interface ReplyItem extends MessageItemBase {
@@ -65,7 +65,7 @@ export interface ReplyItem extends MessageItemBase {
 
 export interface DiceItem extends MessageItemBase {
   messageItemType: typeof MessageItemType.Dice
-  type: number
+  point: number
 }
 
 export interface RpsItem extends MessageItemBase {
@@ -105,12 +105,11 @@ export type ChatHistoryTypeValue = (typeof ChatHistoryType)[keyof typeof ChatHis
 
 // Chat conversation list item
 export interface ChatConversation {
-  id: number
   parentID: number   // group ID or QQ number for history queries
   senderID: number
   type: number       // ChatHistoryType: 0=Group, 1=Private, 2=Notice
   name: string       // display name (may be empty; fallback to parentID)
-  time: number       // unix timestamp (seconds)
+  time: string       // DateTime string
   message: MessageItemBase[]  // last message preview (parsed chain)
   unreadCount: number
   isPinned: boolean
