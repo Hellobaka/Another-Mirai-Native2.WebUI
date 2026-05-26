@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="gearFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e0e7ff"/>
+      <stop offset="100%" stop-color="#ede9fe"/>
+    </linearGradient>
+    <circle id="tooth" cx="0" cy="-17" r="3.5" fill="url(#gearFill)"/>
+  </defs>
+  <!-- Background -->
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#bg)"/>
+  <!-- Gear -->
+  <g transform="translate(32,32)">
+    <use href="#tooth"/>
+    <use href="#tooth" transform="rotate(45)"/>
+    <use href="#tooth" transform="rotate(90)"/>
+    <use href="#tooth" transform="rotate(135)"/>
+    <use href="#tooth" transform="rotate(180)"/>
+    <use href="#tooth" transform="rotate(225)"/>
+    <use href="#tooth" transform="rotate(270)"/>
+    <use href="#tooth" transform="rotate(315)"/>
+    <circle cx="0" cy="0" r="15.5" fill="none" stroke="url(#gearFill)" stroke-width="2.5"/>
+    <circle cx="0" cy="0" r="8" fill="url(#gearFill)"/>
+    <circle cx="0" cy="0" r="3.5" fill="#4f46e5" opacity="0.4"/>
+    <circle cx="0" cy="0" r="1.5" fill="#4f46e5" opacity="0.25"/>
+  </g>
+</svg>
