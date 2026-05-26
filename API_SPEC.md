@@ -239,8 +239,8 @@ GET /api/plugin
       "description": "R!!",
       "version": "2.0.0",
       "auth": [
-        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128,
-        130, 131, 132, 140, 150, 151, 160, 161, 162, 180,
+        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
+        150, 151, 160, 161, 162, 180,
       ],
     },
   ],
@@ -420,8 +420,8 @@ POST /api/plugin/{authCode}/reload
     "description": "R!!",
     "version": "2.0.0",
     "auth": [
-      20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128,
-      130, 131, 132, 140, 150, 151, 160, 161, 162, 180
+      20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
+      150, 151, 160, 161, 162, 180
     ]
   },
   "message": null
@@ -479,8 +479,8 @@ POST /api/plugin/reload-all
       "description": "R!!",
       "version": "2.0.0",
       "auth": [
-        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128,
-        130, 131, 132, 140, 150, 151, 160, 161, 162, 180
+        20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
+        150, 151, 160, 161, 162, 180
       ]
     }
   ],
@@ -503,13 +503,7 @@ GET /api/protocol/list
 ```jsonc
 {
   "code": 0,
-  "data": [
-    "MiraiAPIHttp",
-    "Lagrange.Core",
-    "NoConnection",
-    "OneBot v11",
-    "Satori v1",
-  ],
+  "data": ["MiraiAPIHttp", "Lagrange.Core", "NoConnection", "OneBot v11", "Satori v1"],
   "message": null,
 }
 ```
@@ -946,6 +940,147 @@ POST /api/chat/clear-unread?chatHistoryType={0|1}&parentId={id}
 ```
 
 **Response:** `{ "code": 0, "data": null }`
+
+### 5.9 撤回消息
+
+```
+POST /api/chat/recall?chatHistoryType={0|1}&parentId={id}&messageId={id}
+```
+
+**参数:**
+
+| 参数              | 类型            | 说明                     |
+| ----------------- | --------------- | ------------------------ |
+| `chatHistoryType` | ChatHistoryType | 聊天类型：0=群聊，1=私聊 |
+| `parentId`        | long            | 群号或好友 QQ            |
+| `messageId`       | int             | 消息 ID                  |
+
+**Response 成功:** `{ "code": 0, "data": null }`
+
+**Response 失败:**
+
+| 状态码 | message              | 说明                     |
+| ------ | -------------------- | ------------------------ |
+| 404    | 聊天功能未启用       | EnableChat 为 false      |
+| 404    | 未找到对应的聊天消息 | messageId 对应消息不存在 |
+| 400    | 撤回消息失败         | 协议层撤回失败（如超时） |
+
+### 5.10 获取收藏图片列表
+
+```
+GET /api/chat/collected
+```
+
+获取所有已收藏图片的文件名列表。
+
+**Response:**
+
+```json
+{
+  "code": 0,
+  "data": ["abc123.png", "def456.jpg"]
+}
+```
+
+### 5.11 收藏图片
+
+```
+POST /api/chat/collect?file={hash}
+```
+
+**参数:**
+
+| 参数   | 类型   | 说明                 |
+| ------ | ------ | -------------------- |
+| `file` | string | 图片缓存哈希（必填） |
+
+将已缓存的图片复制到收藏目录（`data/image/collected/`）。
+
+**Response 成功:** `{ "code": 0, "data": "abc123.png" }` — data 为收藏后的文件名
+
+**Response 失败:**
+
+| 状态码 | message                          | 说明                |
+| ------ | -------------------------------- | ------------------- |
+| 404    | 聊天功能未启用                   | EnableChat 为 false |
+| 404    | 找不到此哈希对应的缓存文件       | 图片未缓存或已删除  |
+| 500    | 由于服务器内部错误，收藏图片失败 | 文件复制异常        |
+
+### 5.12 CQ 码转消息链
+
+```
+GET /api/chat/message-chain?message={cq_code}
+```
+
+**参数:**
+
+| 参数      | 类型   | 说明                     |
+| --------- | ------ | ------------------------ |
+| `message` | string | 原始 CQ 码字符串（必填） |
+
+将前端输入的原始 CQ 码字符串解析为结构化的 `MessageItemBase[]`，方便消息发送前预览。
+
+**Response:**
+
+```json
+{
+  "code": 0,
+  "data": {
+    "message": [
+      { "messageItemType": 13, "content": "你好" },
+      { "messageItemType": 1, "faceId": 12 }
+    ]
+  }
+}
+```
+
+> `message` 数组格式参见 [附录：消息链格式](#附录消息链格式)。
+
+### 5.13 上传图片
+
+```
+POST /api/chat/upload-picture
+Content-Type: multipart/form-data
+```
+
+**参数:**
+
+| 参数   | 类型      | 说明                        |
+| ------ | --------- | --------------------------- |
+| `file` | IFormFile | 图片文件（必填，form-data） |
+
+上传图片到 `data/image/` 目录，返回可直接放入消息链的 `Image` 片段。
+
+**约束:**
+
+- 仅允许 `PNG`、`JPG`、`JPEG`、`GIF` 格式
+- 生成 GUID 文件名存储在 `data/image/`，返回 `filePath` 指向 `cached\{GUID}.ext`
+
+**Response 成功:**
+
+```json
+{
+  "code": 0,
+  "data": {
+    "item": {
+      "messageItemType": 3,
+      "hash": "",
+      "filePath": "cached\\a1b2c3d4.png",
+      "isFlash": false,
+      "isEmoji": false
+    }
+  }
+}
+```
+
+**Response 失败:**
+
+| 状态码 | message                                     | 说明                |
+| ------ | ------------------------------------------- | ------------------- |
+| 404    | 聊天功能未启用                              | EnableChat 为 false |
+| 400    | 请选择要上传的图片文件                      | file 为空           |
+| 400    | 仅支持 PNG、JPG、JPEG 和 GIF 格式的图片文件 | 扩展名不合法        |
+| 500    | 由于服务器内部错误，上传图片失败            | 文件写入异常        |
 
 ---
 
@@ -1769,6 +1904,7 @@ SignalR 的 `OnGroupMsg` 和 `OnPrivateMsg` 事件中，`msg` 字段为服务端
 | 11  | Rich     | 富媒体（XML/JSON/App） |
 | 12  | Reply    | 引用回复               |
 | 13  | Text     | 纯文本                 |
+| 14  | File     | 文件                   |
 
 ## 公共字段
 
@@ -1798,8 +1934,8 @@ SignalR 的 `OnGroupMsg` 和 `OnPrivateMsg` 事件中，`msg` 字段为服务端
 }
 ```
 
-| 字段     | 说明     |
-| -------- | -------- |
+| 字段     | 说明                           |
+| -------- | ------------------------------ |
 | `faceId` | QQ 表情 ID（对应 CQFace 枚举） |
 
 ### BFace (2) — 大表情
@@ -1811,8 +1947,8 @@ SignalR 的 `OnGroupMsg` 和 `OnPrivateMsg` 事件中，`msg` 字段为服务端
 }
 ```
 
-| 字段     | 说明         |
-| -------- | ------------ |
+| 字段     | 说明        |
+| -------- | ----------- |
 | `faceId` | 原创表情 ID |
 
 ### Image (3) — 图片
@@ -1854,9 +1990,9 @@ SignalR 的 `OnGroupMsg` 和 `OnPrivateMsg` 事件中，`msg` 字段为服务端
 }
 ```
 
-| 字段        | 说明                            |
-| ----------- | ------------------------------- |
-| `target`    | 目标 QQ 号                      |
+| 字段        | 说明                               |
+| ----------- | ---------------------------------- |
+| `target`    | 目标 QQ 号                         |
 | `allTarget` | 是否 @全体成员（此时 target 为 0） |
 
 ### Reply (12) — 引用回复
@@ -1877,8 +2013,8 @@ SignalR 的 `OnGroupMsg` 和 `OnPrivateMsg` 事件中，`msg` 字段为服务端
 }
 ```
 
-| 字段    | 说明       |
-| ------- | ---------- |
+| 字段    | 说明            |
+| ------- | --------------- |
 | `point` | 骰子点数（1-6） |
 
 ### RPS (7) — 猜拳
@@ -1890,8 +2026,8 @@ SignalR 的 `OnGroupMsg` 和 `OnPrivateMsg` 事件中，`msg` 字段为服务端
 }
 ```
 
-| 字段      | 说明                        |
-| --------- | --------------------------- |
+| 字段      | 说明                           |
+| --------- | ------------------------------ |
 | `rpsType` | 猜拳类型：1=石头，2=剪刀，3=布 |
 
 ### Shake (8) — 窗口抖动
@@ -1925,7 +2061,22 @@ SignalR 的 `OnGroupMsg` 和 `OnPrivateMsg` 事件中，`msg` 字段为服务端
 }
 ```
 
-| 字段               | 说明                           |
-| ------------------ | ------------------------------ |
-| `richContentType`  | 类型：`Json` / `Xml` / `App`   |
-| `content`          | 卡片内容字符串                  |
+| 字段              | 说明                         |
+| ----------------- | ---------------------------- |
+| `richContentType` | 类型：`Json` / `Xml` / `App` |
+| `content`         | 卡片内容字符串               |
+
+### File (14) - 文件
+
+```jsonc
+{
+  "messageItemType": 14,
+  "fileName": "20260524.zip",
+  "fileSize": 2291085,
+}
+```
+
+| 字段       | 说明             |
+| ---------- | ---------------- |
+| `fileName` | 文件名称         |
+| `fileSize` | 文件大小（字节） |
