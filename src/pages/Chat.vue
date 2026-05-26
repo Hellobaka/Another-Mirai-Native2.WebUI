@@ -180,6 +180,11 @@ function ctxReplyCQ(msg: ChatMessage) {
   inputText.value += `[CQ:reply,id=${msg.msgId}] `
 }
 
+function ctxAtCQ(msg: ChatMessage) {
+  closeCtxMenu()
+  inputText.value += `[CQ:at,qq=${msg.senderID}] `
+}
+
 // ── Context menu actions ──
 async function ctxCopy(msg: ChatMessage) {
   closeCtxMenu()
@@ -517,6 +522,12 @@ const nickRequestsSet = nickRequests
               prepend-icon="mdi-reply" title="回复"
               :disabled="ctxMenu.msg.recalled"
               class="ctx-menu-item" @click="ctxReplyCQ(ctxMenu.msg!)"
+            />
+            <v-list-item
+              v-if="ctxMenu.msg"
+              prepend-icon="mdi-at" title="@他"
+              :disabled="ctxMenu.msg.senderID === chat.botQQ"
+              class="ctx-menu-item" @click="ctxAtCQ(ctxMenu.msg!)"
             />
             <v-list-item
               v-if="ctxMenu.msg && canCopy(ctxMenu.msg)"
