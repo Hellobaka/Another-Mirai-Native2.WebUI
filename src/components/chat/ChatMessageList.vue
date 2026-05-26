@@ -78,9 +78,14 @@ function isGroupable(a: { time: string; message: any[] }, b: { time: string; mes
 }
 
 // ── Scroll ──
-function scrollToBottom() {
+function scrollToBottom(smooth = false) {
   const el = messagesEl.value
-  if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  if (!el) return
+  if (smooth) {
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  } else {
+    el.scrollTop = el.scrollHeight
+  }
 }
 
 function onScroll() {
@@ -187,7 +192,7 @@ defineExpose({ scrollToBottom, messagesEl, setCtxMenuOpen })
       <v-btn
         v-if="showScrollBtn"
         icon="mdi-chevron-down" size="small" variant="tonal" color="primary"
-        @click="scrollToBottom"
+        @click="scrollToBottom(true)"
       />
     </div>
   </div>

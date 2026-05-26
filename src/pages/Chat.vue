@@ -116,6 +116,16 @@ async function handleSend() {
 
   await Promise.all([parsePromise, sendPromise])
   pendingSends.value[tempId] = sendOk ? ('' as any) : 'failed'
+
+  if (sendOk && chat.currentChat) {
+    chat.touchConversation(
+      chat.currentChatType,
+      chat.currentChat.parentId,
+      optimistic.message,
+      optimistic.time,
+      chat.botQQ,
+    )
+  }
 }
 
 // ── Retry ──
@@ -173,10 +183,21 @@ async function doRetry() {
 
   await Promise.all([parsePromise, sendPromise])
   pendingSends.value[tempId] = sendOk ? ('' as any) : 'failed'
+
+  if (sendOk && chat.currentChat) {
+    chat.touchConversation(
+      chat.currentChatType,
+      chat.currentChat.parentId,
+      msg.message,
+      msg.time,
+      chat.botQQ,
+    )
+  }
 }
 
 function ctxReplyCQ(msg: ChatMessage) {
   closeCtxMenu()
+  replyCache.value[msg.msgId] = msg
   inputText.value += `[CQ:reply,id=${msg.msgId}] `
 }
 
@@ -246,6 +267,15 @@ async function ctxRepeat(msg: ChatMessage) {
         m.msgId = res.data.data.msgId
       }
       pendingSends.value[tempId] = '' as any
+      if (chat.currentChat) {
+        chat.touchConversation(
+          chat.currentChatType,
+          chat.currentChat.parentId,
+          optimistic.message,
+          optimistic.time,
+          chat.botQQ,
+        )
+      }
     } else {
       pendingSends.value[tempId] = 'failed'
     }
@@ -389,18 +419,16 @@ function dedupOptimistic() {
   const tempIndices: number[] = []
   chat.messages.forEach((m, i) => {
     const tid = (m as unknown as { _tempId?: string })._tempId
-    if (tid && pendingSends.value[tid] === ('' as any)) {
-      const text = (m.message[0] as unknown as { content?: string }).content || ''
-      for (let j = 0; j < chat.messages.length; j++) {
-        if (j === i) continue
-        const other = chat.messages[j]
-        if ((other as unknown as { _tempId?: string })._tempId) continue
-        const otherText = (other.message[0] as unknown as { content?: string }).content || ''
-        if (otherText === text && other.senderID === m.senderID) {
-          tempIndices.push(i)
-          delete pendingSends.value[tid]
-          break
-        }
+    if (tid && pendingSends.value[tid] === ('' as any) && m.msgId > 0) {
+      const dup = chat.messages.find(
+        (other, j) =>
+          j !== i &&
+          !(other as unknown as { _tempId?: string })._tempId &&
+          other.msgId === m.msgId,
+      )
+      if (dup) {
+        tempIndices.push(i)
+        delete pendingSends.value[tid]
       }
     }
   })
@@ -502,6 +530,7 @@ const nickRequestsSet = nickRequests
           v-if="chat.currentChat"
           v-model="inputText"
           :collected-images="collectedImages"
+          :reply-cache="replyCache"
           @send="handleSend"
           @open-emoji="fetchCollected"
         />

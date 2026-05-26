@@ -239,11 +239,33 @@ export const useChatStore = defineStore('chat', () => {
     clearUnreadApi(conv.type, conv.parentID).catch(() => { /* fire and forget */ })
   }
 
+  function touchConversation(chatType: number, parentId: number, message: MessageItemBase[], time: string, senderID: number) {
+    const conv = ensureConversation(chatType, parentId, senderID)
+    if (!nickCache.value[senderID]) fetchNick(senderID)
+    conv.message = message
+    conv.time = time
+    conv.senderID = senderID
+    // Re-sort: move to top
+    const idx = conversations.value.indexOf(conv)
+    if (idx > 0) {
+      conversations.value.splice(idx, 1)
+      conversations.value.unshift(conv)
+    }
+  }
+
   function appendRealTimeMessage(item: ChatMessage, chatType: number, parentId: number) {
     const conv = ensureConversation(chatType, parentId, item.senderID)
     if (!nickCache.value[item.senderID]) fetchNick(item.senderID)
     conv.message = item.message
     conv.time = item.time
+    conv.senderID = item.senderID
+
+    // Re-sort: move updated conversation to top
+    const idx = conversations.value.indexOf(conv)
+    if (idx > 0) {
+      conversations.value.splice(idx, 1)
+      conversations.value.unshift(conv)
+    }
 
     if (!currentChat.value || currentChat.value.parentId !== parentId) {
       conv.unreadCount++
@@ -344,6 +366,6 @@ export const useChatStore = defineStore('chat', () => {
     conversations, messages, currentChat, loading, msgLoading,
     sending, hasMore, currentChatType, convPreview,
     fetchConversations, fetchMessages, selectConversation, closeConversation,
-    sendMsg, clearUnread, botQQ, setBotQQ, getCachedNick, fetchNick,
+    sendMsg, clearUnread, touchConversation, botQQ, setBotQQ, getCachedNick, fetchNick,
   }
 })

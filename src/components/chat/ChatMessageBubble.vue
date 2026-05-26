@@ -221,6 +221,12 @@ function getTempId(): string {
               </div>
               <!-- Text -->
               <span v-else-if="item.messageItemType === MessageItemType.Text" class="msg-text-block">{{ itemText(item) }}</span>
+              <!-- Face -->
+              <img
+                v-else-if="item.messageItemType === MessageItemType.Face || item.messageItemType === MessageItemType.Bface"
+                :src="`/qq-face/${(item as unknown as { faceId: number }).faceId}.png`"
+                class="msg-face-inline"
+              />
               <!-- Image -->
               <img
                 v-else-if="item.messageItemType === MessageItemType.Image"
@@ -323,6 +329,13 @@ function getTempId(): string {
   opacity: 0.55;
 }
 .msg-text-block { white-space: pre-wrap; }
+
+.msg-face-inline {
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+  display: inline;
+}
 
 .msg-image-pure {
   border-radius: 12px;

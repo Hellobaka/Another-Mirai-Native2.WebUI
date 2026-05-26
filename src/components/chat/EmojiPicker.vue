@@ -7,13 +7,14 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   insert: [text: string]
+  insertCollected: [file: string]
 }>()
 
 const emojiTab = ref<'common' | 'favorite'>('common')
 
 const EMOJI_CACHE_KEY = 'amn_emoji_common'
-const DEFAULT_COMMON = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 23, 24, 25, 26, 27, 28, 29, 31]
-const MAX_COMMON = 28
+const DEFAULT_COMMON = []
+const MAX_COMMON = 10
 
 function loadCommonEmojis(): number[] {
   try {
@@ -22,7 +23,9 @@ function loadCommonEmojis(): number[] {
       const arr = JSON.parse(raw)
       if (Array.isArray(arr) && arr.length > 0) return arr
     }
-  } catch { /* */ }
+  } catch {
+    /* */
+  }
   return [...DEFAULT_COMMON]
 }
 
@@ -51,11 +54,13 @@ function insertEmoji(id: number) {
 }
 
 function insertCollected(name: string) {
-  emit('insert', `[CQ:image,file=collected/${name}]`)
+  emit('insertCollected', `collected/${name}`)
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
-function authToken() { return localStorage.getItem('amn_token') || '' }
+function authToken() {
+  return localStorage.getItem('amn_token') || ''
+}
 </script>
 
 <template>
@@ -65,23 +70,13 @@ function authToken() { return localStorage.getItem('amn_token') || '' }
         <v-tabs-window-item value="common">
           <div class="text-caption text-medium-emphasis px-1 pb-1">常用</div>
           <div class="d-flex flex-wrap ga-1">
-            <div
-              v-for="id in commonEmojiIds"
-              :key="id"
-              class="emoji-item"
-              @click="insertEmoji(id)"
-            >
+            <div v-for="id in commonEmojiIds" :key="id" class="emoji-item" @click="insertEmoji(id)">
               <img :src="emojiUrl(id)" :alt="String(id)" class="emoji-img" loading="lazy" />
             </div>
           </div>
           <div class="text-caption text-medium-emphasis px-1 pb-1 mt-2">全部表情</div>
           <div class="d-flex flex-wrap ga-1">
-            <div
-              v-for="id in allEmojiIds"
-              :key="id"
-              class="emoji-item"
-              @click="insertEmoji(id)"
-            >
+            <div v-for="id in allEmojiIds" :key="id" class="emoji-item" @click="insertEmoji(id)">
               <img :src="emojiUrl(id)" :alt="String(id)" class="emoji-img" loading="lazy" />
             </div>
           </div>
