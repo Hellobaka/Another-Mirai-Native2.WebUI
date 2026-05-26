@@ -175,6 +175,11 @@ async function doRetry() {
   pendingSends.value[tempId] = sendOk ? ('' as any) : 'failed'
 }
 
+function ctxReplyCQ(msg: ChatMessage) {
+  closeCtxMenu()
+  inputText.value += `[CQ:reply,id=${msg.msgId}] `
+}
+
 // ── Context menu actions ──
 async function ctxCopy(msg: ChatMessage) {
   closeCtxMenu()
@@ -508,6 +513,12 @@ const nickRequestsSet = nickRequests
         >
           <v-list density="compact" class="pa-0">
             <v-list-item
+              v-if="ctxMenu.msg"
+              prepend-icon="mdi-reply" title="回复"
+              :disabled="ctxMenu.msg.recalled"
+              class="ctx-menu-item" @click="ctxReplyCQ(ctxMenu.msg!)"
+            />
+            <v-list-item
               v-if="ctxMenu.msg && canCopy(ctxMenu.msg)"
               prepend-icon="mdi-content-copy" title="复制"
               class="ctx-menu-item" @click="ctxCopy(ctxMenu.msg!)"
@@ -526,6 +537,7 @@ const nickRequestsSet = nickRequests
             <v-list-item
               v-if="ctxMenu.msg"
               prepend-icon="mdi-undo" title="撤回"
+              :disabled="ctxMenu.msg.recalled"
               class="ctx-menu-item" @click="ctxRecall(ctxMenu.msg!)"
             />
           </v-list>

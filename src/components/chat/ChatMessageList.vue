@@ -3,6 +3,7 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useNotifyStore } from '@/stores/notify'
 import { getHistory } from '@/api/chat'
+import { ChatHistoryType } from '@/models'
 import type { ChatMessage as ChatMessageType } from '@/models'
 import ChatMessageBubble from './ChatMessageBubble.vue'
 import { isTextOnly } from './chatUtils'
@@ -51,6 +52,7 @@ const msgGroupPos = computed<Record<string, GroupPos>>(() => {
     const prev = i > 0 ? msgs[i - 1] : null
     const next = i < msgs.length - 1 ? msgs[i + 1] : null
     const curr = msgs[i]
+    if (curr.type === ChatHistoryType.Notice) continue
     const prevPos = prev ? map[msgKey(prev)] : null
     const canGroupWithPrev = prevPos && (prevPos === 'first' || prevPos === 'middle')
     if (!canGroupWithPrev) runStart = i

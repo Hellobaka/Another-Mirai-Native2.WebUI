@@ -1717,7 +1717,7 @@ GET /realtime?access_token={token}
   "group": 123456789,
   "qq": 987654321,
   "operatedQQ": 111111,
-  "time": "2026-05-21T12:00:00",
+  "time": 100,
 }
 ```
 

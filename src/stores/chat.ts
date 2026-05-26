@@ -4,7 +4,7 @@ import { getConversations, getHistory, sendMessage, getFriendNick, getGroupName,
 import { useHubStore } from './hub'
 import { SignalREvents } from '@/signalr/events'
 import { ChatHistoryType } from '@/models'
-import type { ChatConversation, ChatMessage, SendMessageRequest, GroupMsgPayload, PrivateMsgPayload, MsgRecallPayload, MessageItemBase } from '@/models'
+import type { ChatConversation, ChatMessage, SendMessageRequest, GroupMsgPayload, PrivateMsgPayload, MsgRecallPayload, GroupMemberChangedPayload, GroupBanPayload, MessageItemBase } from '@/models'
 
 export const useChatStore = defineStore('chat', () => {
   const conversations = ref<ChatConversation[]>([])
@@ -220,7 +220,7 @@ export const useChatStore = defineStore('chat', () => {
       }
       conversations.value.unshift(conv)
       // Fetch name async
-      if (chatType === ChatHistoryType.Group) {
+      if (chatType === ChatHistoryType.Group || chatType === ChatHistoryType.Notice) {
         getGroupName(parentId).then((r) => {
           if (r.data.code === 0) conv!.name = r.data.data.groupName
         })
@@ -302,6 +302,42 @@ export const useChatStore = defineStore('chat', () => {
   })
   hub.on(SignalREvents.OnPrivateMsgRecall, (data: MsgRecallPayload) => {
     markRecalled(data.msgId)
+  })
+
+  // ── Notice events ──
+  function makeNoticeText(content: string): MessageItemBase[] {
+    return [{ messageItemType: 13, content } as MessageItemBase]
+  }
+
+  hub.on(SignalREvents.OnGroupAdded, async (data: GroupMemberChangedPayload) => {
+    let nick = String(data.qq)
+    try { nick = await fetchNick(data.qq) } catch { /* */ }
+    appendRealTimeMessage(
+      { id: 0, msgId: 0, type: ChatHistoryType.Notice, parentID: data.group, senderID: data.qq, message: makeNoticeText(`${nick} 加入了本群`), time: new Date().toISOString(), recalled: false },
+      ChatHistoryType.Notice, data.group,
+    )
+  })
+
+  hub.on(SignalREvents.OnGroupLeft, async (data: GroupMemberChangedPayload) => {
+    let nick = String(data.qq)
+    try { nick = await fetchNick(data.qq) } catch { /* */ }
+    appendRealTimeMessage(
+      { id: 0, msgId: 0, type: ChatHistoryType.Notice, parentID: data.group, senderID: data.qq, message: makeNoticeText(`${nick} 离开了群`), time: new Date().toISOString(), recalled: false },
+      ChatHistoryType.Notice, data.group,
+    )
+  })
+
+  hub.on(SignalREvents.OnGroupBan, async (data: GroupBanPayload) => {
+    let banNick = String(data.qq)
+    let targetNick = String(data.operatedQQ)
+    try { banNick = await fetchNick(data.qq) } catch { /* */ }
+    try { targetNick = await fetchNick(data.operatedQQ) } catch { /* */ }
+    const duration = Number(data.time)
+    const timeStr = duration > 0 ? `${duration}秒` : '永久'
+    appendRealTimeMessage(
+      { id: 0, msgId: 0, type: ChatHistoryType.Notice, parentID: data.group, senderID: data.qq, message: makeNoticeText(`${banNick} 禁言了 ${targetNick} ${timeStr}`), time: new Date().toISOString(), recalled: false },
+      ChatHistoryType.Notice, data.group,
+    )
   })
 
   return {

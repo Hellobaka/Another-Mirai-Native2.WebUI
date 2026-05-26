@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { MessageItemType } from '@/models'
+import { computed } from 'vue'
+import { ChatHistoryType, MessageItemType } from '@/models'
 import type { ChatMessage, MessageItemBase } from '@/models'
 import { useChatStore } from '@/stores/chat'
 import { cacheUrl } from '@/api/cache'
@@ -15,6 +16,8 @@ const props = defineProps<{
   pendingState?: string
   replyData: (id: number) => ChatMessage | null
 }>()
+
+const isNotice = computed(() => props.msg.type === ChatHistoryType.Notice)
 
 const emit = defineEmits<{
   contextmenu: [e: MouseEvent, msg: ChatMessage]
@@ -51,7 +54,18 @@ function getTempId(): string {
 </script>
 
 <template>
+  <!-- Notice message -->
+  <div v-if="isNotice" class="msg-row msg-row--notice msg-row-gap">
+    <div class="msg-bubble--notice">
+      <template v-for="(item, si) in trimmedItems(msg.message)" :key="si">
+        <span v-if="item.messageItemType === MessageItemType.Text" class="msg-notice-text">{{ itemText(item) }}</span>
+      </template>
+    </div>
+  </div>
+
+  <!-- Normal message -->
   <div
+    v-else
     :class="[
       'msg-row',
       isSelf ? 'msg-row--self' : '',
@@ -253,11 +267,28 @@ function getTempId(): string {
 .msg-row--self {
   margin-left: auto;
 }
+.msg-row--notice {
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+}
 .msg-row:not(.msg-row-gap) {
   margin-top: 1px;
 }
 .msg-row-gap {
   margin-top: 8px;
+}
+.msg-bubble--notice {
+  display: inline-block;
+  max-width: 70%;
+  padding: 4px 14px;
+  border-radius: 12px;
+  background: rgba(var(--v-theme-on-surface), 0.04);
+}
+.msg-notice-text {
+  font-size: 0.75rem;
+  color: rgba(var(--v-theme-on-surface), 0.5);
+  word-break: break-word;
 }
 .msg-sender { font-size: 0.7rem; }
 .msg-time {
