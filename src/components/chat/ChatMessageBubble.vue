@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, toRaw } from 'vue'
 import { ChatHistoryType, MessageItemType } from '@/models'
 import type { ChatMessage, MessageItemBase } from '@/models'
 import { useChatStore } from '@/stores/chat'
@@ -50,6 +50,14 @@ function senderAvatar(senderID: number) {
 
 function getTempId(): string {
   return (props.msg as unknown as { _tempId?: string })._tempId || ''
+}
+
+function fmtUnknown(item: unknown): string {
+  try {
+    return JSON.stringify(toRaw(item), null, 2)
+  } catch {
+    return String(item)
+  }
 }
 </script>
 
@@ -140,12 +148,23 @@ function getTempId(): string {
               @contextmenu="onContextMenu"
             >
               <template v-if="item.messageItemType === MessageItemType.Image">
-                <img
-                  :src="mediaUrl(item, 'image')"
-                  class="msg-image-inline"
-                  loading="lazy"
-                  @click="emit('open-viewer', mediaUrl(item, 'image'))"
-                />
+                <div class="msg-image-loading">
+                  <div class="msg-image-skeleton">
+                    <v-progress-circular indeterminate size="20" width="2" color="primary" />
+                  </div>
+                  <div class="msg-image-error">
+                    <v-icon icon="mdi-image-broken-variant" size="24" />
+                    <span>图片加载失败</span>
+                  </div>
+                  <img
+                    :src="mediaUrl(item, 'image')"
+                    class="msg-image-inline"
+                    loading="lazy"
+                    @load="($event.target as HTMLElement).parentElement!.classList.add('msg-image-loading--done')"
+                    @error="($event.target as HTMLElement).parentElement!.classList.add('msg-image-loading--error')"
+                    @click="emit('open-viewer', mediaUrl(item, 'image'))"
+                  />
+                </div>
                 <div v-if="msg.recalled" class="recall-overlay">
                   <span class="recall-text">已撤回</span>
                 </div>
@@ -189,6 +208,20 @@ function getTempId(): string {
               <v-progress-circular indeterminate size="16" width="2" color="primary" />
             </div>
 
+            <!-- Fallback: real message with no renderable items -->
+            <div
+              v-if="trimmedItems(msg.message).length === 0 && !getTempId()"
+              class="msg-empty-fallback"
+            >
+              <span class="msg-unknown-inline">
+                <v-icon icon="mdi-code-braces" size="14" class="mr-1" />
+                无渲染内容
+                <v-tooltip activator="parent" location="top" max-width="360">
+                  <pre class="msg-unknown-json">{{ fmtUnknown(msg.message) }}</pre>
+                </v-tooltip>
+              </span>
+            </div>
+
             <template v-for="(item, si) in trimmedItems(msg.message)" :key="si">
               <!-- @ block -->
               <span
@@ -228,13 +261,23 @@ function getTempId(): string {
                 class="msg-face-inline"
               />
               <!-- Image -->
-              <img
-                v-else-if="item.messageItemType === MessageItemType.Image"
-                :src="mediaUrl(item, 'image')"
-                class="msg-image-inline"
-                loading="lazy"
-                @click="emit('open-viewer', mediaUrl(item, 'image'))"
-              />
+              <div v-else-if="item.messageItemType === MessageItemType.Image" class="msg-image-loading msg-image-loading--inline">
+                <div class="msg-image-skeleton">
+                  <v-progress-circular indeterminate size="16" width="2" color="primary" />
+                </div>
+                <div class="msg-image-error">
+                  <v-icon icon="mdi-image-broken-variant" size="18" />
+                  <span>加载失败</span>
+                </div>
+                <img
+                  :src="mediaUrl(item, 'image')"
+                  class="msg-image-inline"
+                  loading="lazy"
+                  @load="($event.target as HTMLElement).parentElement!.classList.add('msg-image-loading--done')"
+                  @error="($event.target as HTMLElement).parentElement!.classList.add('msg-image-loading--error')"
+                  @click="emit('open-viewer', mediaUrl(item, 'image'))"
+                />
+              </div>
               <!-- Record -->
               <audio
                 v-else-if="item.messageItemType === MessageItemType.Record"
@@ -250,8 +293,25 @@ function getTempId(): string {
                   <span class="msg-file-size">{{ formatFileSize((item as unknown as { fileSize: number }).fileSize) }}</span>
                 </div>
               </div>
-              <!-- Other -->
-              <span v-else class="msg-misc-inline">{{ itemText(item) || '' }}</span>
+              <!-- Unknown -->
+              <span
+                v-else-if="item.messageItemType === MessageItemType.Unknown"
+                class="msg-unknown-inline msg-unknown-inline--known"
+              >
+                <v-icon icon="mdi-help-circle-outline" size="14" class="mr-1" />
+                不支持的消息
+                <v-tooltip activator="parent" location="top" max-width="340">
+                  <pre class="msg-unknown-json">{{ fmtUnknown(item) }}</pre>
+                </v-tooltip>
+              </span>
+              <!-- Unhandled type -->
+              <span v-else class="msg-unknown-inline">
+                <v-icon icon="mdi-code-braces" size="14" class="mr-1" />
+                未知消息
+                <v-tooltip activator="parent" location="top" max-width="340">
+                  <pre class="msg-unknown-json">{{ fmtUnknown(item) }}</pre>
+                </v-tooltip>
+              </span>
             </template>
           </div>
 
@@ -388,6 +448,87 @@ function getTempId(): string {
   display: block;
   margin: 2px 0;
   cursor: pointer;
+}
+
+/* ── Image loading placeholder ── */
+.msg-image-loading {
+  position: relative;
+  display: block;
+  min-height: 80px;
+  min-width: 100px;
+}
+.msg-image-loading--inline {
+  min-height: 60px;
+  min-width: 80px;
+  display: inline-block;
+  vertical-align: middle;
+  margin: 2px 0;
+}
+.msg-image-skeleton {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--v-theme-on-surface), 0.04);
+  border-radius: 12px;
+  z-index: 1;
+}
+.msg-image-loading--done .msg-image-skeleton,
+.msg-image-loading--error .msg-image-skeleton {
+  display: none;
+}
+.msg-image-loading--done .msg-image-error {
+  display: none;
+}
+.msg-image-loading--error .msg-image-inline {
+  display: none;
+}
+.msg-image-error {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: rgba(var(--v-theme-on-surface), 0.04);
+  border-radius: 12px;
+  color: rgba(var(--v-theme-on-surface), 0.3);
+  font-size: 0.7rem;
+  z-index: 2;
+}
+.msg-image-loading--error .msg-image-error {
+  display: flex;
+}
+.msg-image-loading .msg-image-inline {
+  position: relative;
+  z-index: 0;
+}
+
+/* ── Unknown / unhandled message type ── */
+.msg-unknown-inline {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(var(--v-theme-warning), 0.1);
+  color: rgba(var(--v-theme-warning), 0.85);
+  font-size: 0.75rem;
+  cursor: help;
+}
+.msg-unknown-inline--known {
+  background: rgba(var(--v-theme-on-surface), 0.06);
+  color: rgba(var(--v-theme-on-surface), 0.55);
+}
+.msg-unknown-json {
+  margin: 0;
+  font-size: 0.7rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: rgba(var(--v-theme-on-surface), 0.8);
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .msg-audio { display: block; max-width: 280px; height: 36px; margin: 2px 0; }

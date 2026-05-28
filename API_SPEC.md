@@ -1890,7 +1890,7 @@ SignalR 的 `OnGroupMsg` 和 `OnPrivateMsg` 事件中，`msg` 字段为服务端
 
 | 值  | 对应类型 | 说明                   |
 | --- | -------- | ---------------------- |
-| 0   | Unknown  | 未知（不应出现）       |
+| 0   | Unknown  | 未知                   |
 | 1   | Face     | QQ 表情                |
 | 2   | Bface    | 大表情                 |
 | 3   | Image    | 图片                   |
@@ -1915,6 +1915,15 @@ SignalR 的 `OnGroupMsg` 和 `OnPrivateMsg` 事件中，`msg` 字段为服务端
 ```
 
 ## 各类型具体字段
+
+### Unknown (0) - 无法解析的消息
+
+```jsonc
+{
+  "messageItemType": 0,
+  "raw": "无法解析的消息原文",
+}
+```
 
 ### Text (13) — 纯文本
 
