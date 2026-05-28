@@ -24,7 +24,7 @@ npm run build
 
 ### 方式一：使用公用面板
 
-直接访问 **[amn2-panel.hellobaka.moe](https://amn2-panel.hellobaka.moe)**，登录后点击右上角齿轮图标，将后端地址配置为你的 AMN2 服务器地址（例如 `http://你的服务器IP:5000`）并保存。
+直接访问 **[amn2-panel.hellobaka.moe](https://amn2-panel.hellobaka.moe)**，点击右上角齿轮图标，将后端地址配置为你的 AMN2 服务器地址（例如 `http://你的服务器IP:5000`）并保存。
 
 > 页面本身是纯前端静态资源，所有数据存储在浏览器本地，不会经过公用服务器。
 
@@ -48,4 +48,4 @@ Another-Mirai-Native2/
 
 ### 方式三：自行部署
 
-将 `dist/` 部署到任意静态文件服务器（Nginx、Caddy、IIS 等），配置反向代理将 `/api` 和 `/hub` 转发到 AMN2 后端（默认端口 5000）。
+将 `dist/` 部署到任意静态文件服务器（Nginx、Caddy、IIS 等），配置反向代理将 `/api` 和 `/hub` 转发到 AMN2 后端（默认端口 5000），需要配置IP转发头`X-Forwarded-For`与`X-Forwarded-Proto`
