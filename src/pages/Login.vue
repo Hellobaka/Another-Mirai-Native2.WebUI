@@ -34,6 +34,7 @@ async function handleLogin() {
     <v-card class="glass-card pa-8 login-card" max-width="420" width="100%">
       <div class="login-card-header">
         <v-btn
+          v-if="!settings.isConfigLocked"
           icon="mdi-cog"
           variant="text"
           size="small"

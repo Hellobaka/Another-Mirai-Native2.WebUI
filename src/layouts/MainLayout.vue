@@ -164,7 +164,7 @@ onUnmounted(() => {
       <v-app-bar-title>{{ app.pageTitle }}</v-app-bar-title>
 
       <template #append>
-        <v-btn icon="mdi-cog" variant="text" size="small" @click="settings.openModal()" />
+        <v-btn v-if="!settings.isConfigLocked" icon="mdi-cog" variant="text" size="small" @click="settings.openModal()" />
         <v-btn icon variant="text" size="small" @click="app.toggleTheme()">
           <v-icon :icon="app.themeMode === 'dark' ? 'mdi-weather-night' : app.themeMode === 'light' ? 'mdi-weather-sunny' : 'mdi-theme-light-dark'" />
           <v-tooltip activator="parent" location="bottom">
