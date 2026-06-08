@@ -5,8 +5,13 @@ import { ChatHistoryType, MessageItemType } from '@/models'
 import type { MessageItemBase, ChatMessage, SendMessageRequest } from '@/models'
 import { useChatStore } from '@/stores/chat'
 import {
-  getHistory, getMessage, sendMessage, recallMessage,
-  collectImage, getCollected, convertMessageChain,
+  getHistory,
+  getMessage,
+  sendMessage,
+  recallMessage,
+  collectImage,
+  getCollected,
+  convertMessageChain,
 } from '@/api/chat'
 import { cacheUrl } from '@/api/cache'
 import { useNotifyStore } from '@/stores/notify'
@@ -15,7 +20,12 @@ import ChatMessageList from '@/components/chat/ChatMessageList.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
 import ImageViewer from '@/components/chat/ImageViewer.vue'
 import {
-  msgToCqCode, msgToText, canCopy, canRepeat, hasImage, getImageHash,
+  msgToCqCode,
+  msgToText,
+  canCopy,
+  canRepeat,
+  hasImage,
+  getImageHash,
 } from '@/components/chat/chatUtils'
 
 const app = useAppStore()
@@ -29,7 +39,10 @@ const msgList = ref<InstanceType<typeof ChatMessageList> | null>(null)
 
 // ── Context menu ──
 const ctxMenu = ref<{ show: boolean; x: number; y: number; msg: ChatMessage | null }>({
-  show: false, x: 0, y: 0, msg: null,
+  show: false,
+  x: 0,
+  y: 0,
+  msg: null,
 })
 let ctxLongPressTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -46,7 +59,10 @@ function onMsgTouchStart(e: TouchEvent, msg: ChatMessage) {
 }
 
 function onMsgTouchEnd() {
-  if (ctxLongPressTimer) { clearTimeout(ctxLongPressTimer); ctxLongPressTimer = null }
+  if (ctxLongPressTimer) {
+    clearTimeout(ctxLongPressTimer)
+    ctxLongPressTimer = null
+  }
 }
 
 function closeCtxMenu() {
@@ -61,7 +77,8 @@ async function handleSend() {
 
   const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
   const optimistic: ChatMessage = {
-    id: 0, msgId: 0,
+    id: 0,
+    msgId: 0,
     type: chat.currentChatType,
     parentID: chat.currentChat.parentId,
     senderID: chat.botQQ,
@@ -74,8 +91,6 @@ async function handleSend() {
 
   pendingSends.value[tempId] = 'parsing'
   chat.messages.push(optimistic)
-  await nextTick()
-  msgList.value?.scrollToBottom()
 
   const body: SendMessageRequest = {
     chatType: chat.currentChatType,
@@ -158,7 +173,9 @@ async function doRetry() {
     .then((res) => {
       if (res.data.code === 0 && res.data.data.message?.length) {
         msg.message = res.data.data.message
-      } else { throw new Error('empty') }
+      } else {
+        throw new Error('empty')
+      }
     })
     .catch(() => {
       msg.message = [
@@ -220,7 +237,9 @@ async function ctxCopy(msg: ChatMessage) {
         notify.success('图片已复制')
         return
       }
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
   }
   const text = msgToText(msg)
   if (text) {
@@ -236,20 +255,20 @@ async function ctxRepeat(msg: ChatMessage) {
 
   const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
   const optimistic: ChatMessage = {
-    id: 0, msgId: 0,
+    id: 0,
+    msgId: 0,
     type: chat.currentChatType,
     parentID: chat.currentChat.parentId,
     senderID: chat.botQQ,
     message: msg.message,
     time: new Date().toISOString(),
-    recalled: false, pluginName: '',
+    recalled: false,
+    pluginName: '',
   } as unknown as ChatMessage
   ;(optimistic as unknown as { _tempId: string })._tempId = tempId
 
   pendingSends.value[tempId] = 'sending'
   chat.messages.push(optimistic)
-  await nextTick()
-  msgList.value?.scrollToBottom()
 
   try {
     const body: SendMessageRequest = {
@@ -288,9 +307,13 @@ async function ctxRecall(msg: ChatMessage) {
   closeCtxMenu()
   try {
     const res = await recallMessage(msg.type, msg.parentID, msg.msgId)
-    if (res.data.code === 0) { msg.recalled = true; notify.success('已撤回') }
-    else notify.error(res.data.message || '撤回失败')
-  } catch { notify.error('撤回失败') }
+    if (res.data.code === 0) {
+      msg.recalled = true
+      notify.success('已撤回')
+    } else notify.error(res.data.message || '撤回失败')
+  } catch {
+    notify.error('撤回失败')
+  }
 }
 
 // ── Collected images ──
@@ -302,14 +325,19 @@ async function fetchCollected() {
   try {
     const res = await getCollected()
     if (res.data.code === 0) collectedImages.value = res.data.data
-  } catch { /* */ }
+  } catch {
+    /* */
+  }
   collectedLoaded = true
 }
 
 async function ctxFavorite(msg: ChatMessage) {
   closeCtxMenu()
   const hash = getImageHash(msg)
-  if (!hash) { notify.error('无法获取图片标识'); return }
+  if (!hash) {
+    notify.error('无法获取图片标识')
+    return
+  }
   try {
     const res = await collectImage(hash)
     if (res.data.code === 0) {
@@ -318,7 +346,9 @@ async function ctxFavorite(msg: ChatMessage) {
         collectedImages.value.push(res.data.data)
       }
     } else notify.error(res.data.message || '收藏失败')
-  } catch { notify.error('收藏失败') }
+  } catch {
+    notify.error('收藏失败')
+  }
 }
 
 // ── Reply ──
@@ -332,7 +362,9 @@ async function fetchReply(id: number) {
   try {
     const res = await getMessage(chat.currentChatType, chat.currentChat.parentId, id)
     replyCache.value[id] = res.data.code === 0 ? res.data.data : null
-  } catch { replyCache.value[id] = null }
+  } catch {
+    replyCache.value[id] = null
+  }
 }
 
 function getReplyData(id: number): ChatMessage | null {
@@ -422,9 +454,7 @@ function dedupOptimistic() {
     if (tid && pendingSends.value[tid] === ('' as any) && m.msgId > 0) {
       const dup = chat.messages.find(
         (other, j) =>
-          j !== i &&
-          !(other as unknown as { _tempId?: string })._tempId &&
-          other.msgId === m.msgId,
+          j !== i && !(other as unknown as { _tempId?: string })._tempId && other.msgId === m.msgId,
       )
       if (dup) {
         tempIndices.push(i)
@@ -441,22 +471,8 @@ function dedupOptimistic() {
 const nickRequests = ref<Set<number>>(new Set())
 
 watch(
-  () => chat.msgLoading,
-  async (loading) => {
-    if (!loading && chat.messages.length > 0) {
-      await nextTick()
-      msgList.value?.scrollToBottom()
-    }
-  },
-)
-
-watch(
   () => chat.messages.length,
   async () => {
-    const el = msgList.value?.messagesEl
-    const wasNearBottom = el
-      ? el.scrollHeight - el.scrollTop - el.clientHeight < 200
-      : true
     for (const msg of chat.messages) {
       const qq = msg.senderID
       if (!nickRequests.value.has(qq) && !chat.getCachedNick(qq)) {
@@ -471,10 +487,6 @@ watch(
       }
     }
     dedupOptimistic()
-    await nextTick()
-    if (wasNearBottom) {
-      msgList.value?.scrollToBottom()
-    }
   },
 )
 
@@ -543,42 +555,55 @@ const nickRequestsSet = nickRequests
         <v-card
           class="ctx-menu-card"
           :style="{ left: ctxMenu.x + 'px', top: ctxMenu.y + 'px' }"
-          @click.stop @touchstart.stop
+          @click.stop
+          @touchstart.stop
         >
           <v-list density="compact" class="pa-0">
             <v-list-item
               v-if="ctxMenu.msg"
-              prepend-icon="mdi-reply" title="回复"
+              prepend-icon="mdi-reply"
+              title="回复"
               :disabled="ctxMenu.msg.recalled"
-              class="ctx-menu-item" @click="ctxReplyCQ(ctxMenu.msg!)"
+              class="ctx-menu-item"
+              @click="ctxReplyCQ(ctxMenu.msg!)"
             />
             <v-list-item
               v-if="ctxMenu.msg"
-              prepend-icon="mdi-at" title="@他"
+              prepend-icon="mdi-at"
+              title="@他"
               :disabled="ctxMenu.msg.senderID === chat.botQQ"
-              class="ctx-menu-item" @click="ctxAtCQ(ctxMenu.msg!)"
+              class="ctx-menu-item"
+              @click="ctxAtCQ(ctxMenu.msg!)"
             />
             <v-list-item
               v-if="ctxMenu.msg && canCopy(ctxMenu.msg)"
-              prepend-icon="mdi-content-copy" title="复制"
-              class="ctx-menu-item" @click="ctxCopy(ctxMenu.msg!)"
+              prepend-icon="mdi-content-copy"
+              title="复制"
+              class="ctx-menu-item"
+              @click="ctxCopy(ctxMenu.msg!)"
             />
             <v-list-item
               v-if="ctxMenu.msg && hasImage(ctxMenu.msg)"
-              prepend-icon="mdi-heart-outline" title="收藏"
-              class="ctx-menu-item" @click="ctxFavorite(ctxMenu.msg!)"
+              prepend-icon="mdi-heart-outline"
+              title="收藏"
+              class="ctx-menu-item"
+              @click="ctxFavorite(ctxMenu.msg!)"
             />
             <v-list-item
               v-if="ctxMenu.msg && canRepeat(ctxMenu.msg)"
-              prepend-icon="mdi-plus-one" title="+1"
-              class="ctx-menu-item" @click="ctxRepeat(ctxMenu.msg!)"
+              prepend-icon="mdi-plus-one"
+              title="+1"
+              class="ctx-menu-item"
+              @click="ctxRepeat(ctxMenu.msg!)"
             />
             <v-divider class="my-1" />
             <v-list-item
               v-if="ctxMenu.msg"
-              prepend-icon="mdi-undo" title="撤回"
+              prepend-icon="mdi-undo"
+              title="撤回"
               :disabled="ctxMenu.msg.recalled"
-              class="ctx-menu-item" @click="ctxRecall(ctxMenu.msg!)"
+              class="ctx-menu-item"
+              @click="ctxRecall(ctxMenu.msg!)"
             />
           </v-list>
         </v-card>
@@ -615,18 +640,38 @@ const nickRequestsSet = nickRequests
 }
 
 /* ── Context menu ── */
-.ctx-overlay { position: fixed; inset: 0; z-index: 9999; }
-.ctx-menu-card { position: fixed; min-width: 140px; z-index: 10000; }
-.ctx-menu-item { cursor: pointer; border-radius: 8px; min-height: 36px !important; }
+.ctx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+.ctx-menu-card {
+  position: fixed;
+  min-width: 140px;
+  z-index: 10000;
+}
+.ctx-menu-item {
+  cursor: pointer;
+  border-radius: 8px;
+  min-height: 36px !important;
+}
 
 /* ── Flash highlight ── */
 :global(.msg-flash) {
   animation: flash-bg 1s ease-in-out forwards;
 }
 @keyframes flash-bg {
-  0% { background: transparent; }
-  15% { background: rgba(var(--v-theme-primary), 0.18); }
-  85% { background: rgba(var(--v-theme-primary), 0.18); }
-  100% { background: transparent; }
+  0% {
+    background: transparent;
+  }
+  15% {
+    background: rgba(var(--v-theme-primary), 0.18);
+  }
+  85% {
+    background: rgba(var(--v-theme-primary), 0.18);
+  }
+  100% {
+    background: transparent;
+  }
 }
 </style>
