@@ -103,7 +103,8 @@ function insertImage(file: string) {
 }
 
 function getNick(qq: number): string {
-  return chat.getCachedNick(qq) || String(qq)
+  const parentId = chat.currentChatType === 0 && chat.currentChat ? chat.currentChat.parentId : undefined
+  return chat.getCachedNick(qq, parentId) || String(qq)
 }
 
 defineExpose({ insertAt, insertReply, insertFace, insertImage })

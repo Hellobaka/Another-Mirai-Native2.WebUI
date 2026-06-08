@@ -28,6 +28,10 @@ export function getGroupName(groupId: number) {
   return http.get<ApiResponse<{ groupName: string }>>(`/chat/group-name?groupId=${groupId}`)
 }
 
+export function getGroupMemberCard(groupId: number, qq: number) {
+  return http.get<ApiResponse<{ card: string }>>(`/chat/group-member-card?groupId=${groupId}&qq=${qq}`)
+}
+
 export function getMessage(chatHistoryType: number, parentId: number, messageId: number) {
   return http.get<ApiResponse<ChatMessage>>(
     `/chat/message?chatHistoryType=${chatHistoryType}&parentId=${parentId}&messageId=${messageId}`,

@@ -468,17 +468,10 @@ function dedupOptimistic() {
 }
 
 // ── Watchers ──
-const nickRequests = ref<Set<number>>(new Set())
-
 watch(
   () => chat.messages.length,
   async () => {
     for (const msg of chat.messages) {
-      const qq = msg.senderID
-      if (!nickRequests.value.has(qq) && !chat.getCachedNick(qq)) {
-        nickRequests.value.add(qq)
-        chat.fetchNick(qq)
-      }
       for (const item of msg.message) {
         if (item.messageItemType === MessageItemType.Reply) {
           const replyId = (item as unknown as { id: number }).id
@@ -493,9 +486,6 @@ watch(
 onMounted(async () => {
   await chat.fetchConversations()
 })
-
-// Expose for context menu event handlers on message bubbles in ChatMessageList
-const nickRequestsSet = nickRequests
 </script>
 
 <template>

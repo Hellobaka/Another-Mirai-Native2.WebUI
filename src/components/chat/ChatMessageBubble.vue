@@ -30,7 +30,8 @@ const emit = defineEmits<{
 const chat = useChatStore()
 
 function senderDisplay(): string {
-  const nick = chat.getCachedNick(props.msg.senderID) || String(props.msg.senderID)
+  const parentId = props.msg.type === ChatHistoryType.Group ? props.msg.parentID : undefined
+  const nick = chat.getCachedNick(props.msg.senderID, parentId) || String(props.msg.senderID)
   if (props.msg.pluginName) return `${nick}[${props.msg.pluginName}]`
   return nick
 }
@@ -230,7 +231,7 @@ function fmtUnknown(item: unknown): string {
                 :class="{ 'msg-at--clickable': !(item as unknown as { allTarget: boolean }).allTarget }"
                 @click="!(item as unknown as { allTarget: boolean }).allTarget && emit('at-click', (item as unknown as { target: number }).target)"
               >
-                {{ (item as unknown as { allTarget: boolean }).allTarget ? '@全体成员' : '@' + (chat.getCachedNick((item as unknown as { target: number }).target) || (item as unknown as { target: number }).target) }}
+                {{ (item as unknown as { allTarget: boolean }).allTarget ? '@全体成员' : '@' + (chat.getCachedNick((item as unknown as { target: number }).target, props.msg.type === ChatHistoryType.Group ? props.msg.parentID : undefined) || (item as unknown as { target: number }).target) }}
               </span>
               <!-- Reply block -->
               <div
@@ -240,7 +241,7 @@ function fmtUnknown(item: unknown): string {
               >
                 <template v-if="replyData((item as unknown as { id: number }).id)">
                   <div class="msg-reply-header">
-                    <span class="msg-reply-sender">{{ chat.getCachedNick(replyData((item as unknown as { id: number }).id)!.senderID) || replyData((item as unknown as { id: number }).id)!.senderID }}</span>
+                    <span class="msg-reply-sender">{{ (() => { const rm = replyData((item as unknown as { id: number }).id)!; const rp = rm.type === ChatHistoryType.Group ? rm.parentID : undefined; return chat.getCachedNick(rm.senderID, rp) || rm.senderID })() }}</span>
                     <span class="msg-reply-time"> · {{ formatReplyTime(replyData((item as unknown as { id: number }).id)!.time) }}</span>
                   </div>
                   <div class="msg-reply-body line-clamp-1">

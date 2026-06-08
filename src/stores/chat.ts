@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getConversations, getHistory, sendMessage, getFriendNick, getGroupName, clearUnread as clearUnreadApi } from '@/api/chat'
+import { getConversations, getHistory, sendMessage, getFriendNick, getGroupName, getGroupMemberCard, clearUnread as clearUnreadApi } from '@/api/chat'
 import { useHubStore } from './hub'
 import { SignalREvents } from '@/signalr/events'
 import { ChatHistoryType } from '@/models'
@@ -39,11 +39,30 @@ export const useChatStore = defineStore('chat', () => {
 
   function setBotQQ(qq: number) { botQQ.value = qq }
 
-  function getCachedNick(qq: number): string {
+  function getCachedNick(qq: number, parentId?: number): string {
+    if (parentId && parentId > 0) {
+      const card = nickCache.value[`g:${parentId}:${qq}`]
+      if (card) return card
+    }
     return nickCache.value[qq] || ''
   }
 
-  async function fetchNick(qq: number): Promise<string> {
+  async function fetchNick(qq: number, parentId?: number): Promise<string> {
+    // Group message: always try group card first, use composite key to avoid duplicate requests
+    if (parentId && parentId > 0) {
+      const groupKey = `g:${parentId}:${qq}`
+      if (nickCache.value[groupKey]) return nickCache.value[groupKey]
+      try {
+        const r = await getGroupMemberCard(parentId, qq)
+        if (r.data.code === 0 && r.data.data.card) {
+          nickCache.value[groupKey] = r.data.data.card
+          saveNickCache(nickCache.value)
+          return r.data.data.card
+        }
+      } catch { /* */ }
+      // Group card failed — fall back to friend nick
+    }
+    // Private message (or group fallback): use friend nick cache
     if (nickCache.value[qq]) return nickCache.value[qq]
     try {
       const r = await getFriendNick(qq)
@@ -162,6 +181,7 @@ export const useChatStore = defineStore('chat', () => {
         } else {
           messages.value = [...res.data.data, ...messages.value]
         }
+        fetchMissingNicks(res.data.data, chatType)
         hasMore.value = res.data.data.length >= 50
       }
     } finally {
@@ -233,6 +253,20 @@ export const useChatStore = defineStore('chat', () => {
     return conv
   }
 
+  function fetchMissingNicks(msgs: ChatMessage[], chatType?: number) {
+    for (const msg of msgs) {
+      const qq = msg.senderID
+      if (qq <= 0) continue
+      if (chatType === ChatHistoryType.Group) {
+        // Group: always try group card, ignoring stale friend nick cache
+        fetchNick(qq, msg.parentID)
+      } else if (!nickCache.value[qq]) {
+        // Private: use friend nick cache normally
+        fetchNick(qq)
+      }
+    }
+  }
+
   function clearUnread(conv: ChatConversation) {
     conv.unreadCount = 0
     flushUnreadToCache()
@@ -255,7 +289,7 @@ export const useChatStore = defineStore('chat', () => {
 
   function appendRealTimeMessage(item: ChatMessage, chatType: number, parentId: number) {
     const conv = ensureConversation(chatType, parentId, item.senderID)
-    if (!nickCache.value[item.senderID]) fetchNick(item.senderID)
+    if (!nickCache.value[item.senderID]) fetchNick(item.senderID, parentId)
     conv.message = item.message
     conv.time = item.time
     conv.senderID = item.senderID
