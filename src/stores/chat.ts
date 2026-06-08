@@ -35,6 +35,40 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   const nickCache = ref<Record<number, string>>(loadNickCache())
+
+  // ── Group name cache (localStorage backed, 1 day TTL) ──
+  const GROUP_NAME_CACHE_KEY = 'amn_group_name_cache'
+  const GROUP_NAME_CACHE_TTL = 86400000 // 1 day
+
+  function loadGroupNameCache(): Record<number, string> {
+    try {
+      const raw = localStorage.getItem(GROUP_NAME_CACHE_KEY)
+      if (raw) {
+        const { data, ts } = JSON.parse(raw)
+        if (Date.now() - ts < GROUP_NAME_CACHE_TTL) return data
+      }
+    } catch { /* */ }
+    return {}
+  }
+
+  function saveGroupNameCache(map: Record<number, string>) {
+    localStorage.setItem(GROUP_NAME_CACHE_KEY, JSON.stringify({ data: map, ts: Date.now() }))
+  }
+
+  const groupNameCache = ref<Record<number, string>>(loadGroupNameCache())
+
+  async function fetchGroupName(groupId: number): Promise<string> {
+    if (groupNameCache.value[groupId]) return groupNameCache.value[groupId]
+    try {
+      const r = await getGroupName(groupId)
+      if (r.data.code === 0 && r.data.data.groupName) {
+        groupNameCache.value[groupId] = r.data.data.groupName
+        saveGroupNameCache(groupNameCache.value)
+        return r.data.data.groupName
+      }
+    } catch { /* */ }
+    return ''
+  }
   const botQQ = ref(0)
 
   function setBotQQ(qq: number) { botQQ.value = qq }
@@ -93,7 +127,8 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function convPreview(conv: ChatConversation): string {
-    const nick = nickCache.value[conv.senderID] || ''
+    const parentId = conv.type === ChatHistoryType.Group ? conv.parentID : undefined
+    const nick = getCachedNick(conv.senderID, parentId)
     const isSelf = botQQ.value > 0 && conv.senderID === botQQ.value
     const prefix = nick && !isSelf ? `${nick}: ` : ''
     const body = msgItemsToPreview(conv.message)
@@ -147,17 +182,18 @@ export const useChatStore = defineStore('chat', () => {
         flushUnreadToCache()
         // Preload sender nicks
         for (const conv of conversations.value) {
-          if (conv.senderID && !nickCache.value[conv.senderID]) {
-            fetchNick(conv.senderID) // fire-and-forget
-          }
+          if (!conv.senderID) continue
+          const pid = conv.type === ChatHistoryType.Group ? conv.parentID : undefined
+          if (getCachedNick(conv.senderID, pid)) continue
+          fetchNick(conv.senderID, pid) // fire-and-forget
         }
         // Fetch names for conversations that don't have one
         for (const conv of conversations.value) {
           if (conv.name) continue
           try {
             if (conv.type === ChatHistoryType.Group) {
-              const r = await getGroupName(conv.parentID)
-              if (r.data.code === 0) conv.name = r.data.data.groupName
+              const name = await fetchGroupName(conv.parentID)
+              if (name) conv.name = name
             } else if (conv.type === ChatHistoryType.Private) {
               const r = await getFriendNick(conv.parentID)
               if (r.data.code === 0) conv.name = r.data.data.nick
@@ -241,8 +277,8 @@ export const useChatStore = defineStore('chat', () => {
       conversations.value.unshift(conv)
       // Fetch name async
       if (chatType === ChatHistoryType.Group || chatType === ChatHistoryType.Notice) {
-        getGroupName(parentId).then((r) => {
-          if (r.data.code === 0) conv!.name = r.data.data.groupName
+        fetchGroupName(parentId).then((name) => {
+          if (name) conv!.name = name
         })
       } else {
         getFriendNick(parentId).then((r) => {
@@ -275,7 +311,8 @@ export const useChatStore = defineStore('chat', () => {
 
   function touchConversation(chatType: number, parentId: number, message: MessageItemBase[], time: string, senderID: number) {
     const conv = ensureConversation(chatType, parentId, senderID)
-    if (!nickCache.value[senderID]) fetchNick(senderID)
+    const pid = chatType === ChatHistoryType.Group ? parentId : undefined
+    if (!getCachedNick(senderID, pid)) fetchNick(senderID, pid)
     conv.message = message
     conv.time = time
     conv.senderID = senderID

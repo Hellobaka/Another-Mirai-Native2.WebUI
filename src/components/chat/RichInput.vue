@@ -451,6 +451,12 @@ defineExpose({ insertSegment, clear })
   white-space: nowrap;
   max-width: 300px;
 }
+
+@media (max-width: 600px) {
+  :deep(.reply-chip-body) {
+    max-width: 180px;
+  }
+}
 :deep(.rich-chip--image) {
   display: inline-block;
   vertical-align: middle;

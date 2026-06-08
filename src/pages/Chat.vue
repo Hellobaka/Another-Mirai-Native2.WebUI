@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted } from 'vue'
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { useDisplay } from 'vuetify'
 import { useAppStore } from '@/stores/app'
 import { ChatHistoryType, MessageItemType } from '@/models'
 import type { MessageItemBase, ChatMessage, SendMessageRequest } from '@/models'
@@ -31,7 +32,10 @@ import {
 const app = useAppStore()
 const chat = useChatStore()
 const notify = useNotifyStore()
+const display = useDisplay()
 app.setPageTitle('聊天')
+
+const isMobile = computed(() => display.smAndDown.value)
 
 const inputText = ref('')
 const pendingSends = ref<Record<string, 'parsing' | 'sending' | 'failed'>>({})
@@ -48,14 +52,21 @@ let ctxLongPressTimer: ReturnType<typeof setTimeout> | null = null
 
 function onMsgContextMenu(e: MouseEvent, msg: ChatMessage) {
   e.preventDefault()
-  ctxMenu.value = { show: true, x: e.clientX, y: e.clientY, msg }
+  ctxMenu.value = { show: true, x: clampX(e.clientX), y: clampY(e.clientY), msg }
 }
 
 function onMsgTouchStart(e: TouchEvent, msg: ChatMessage) {
   ctxLongPressTimer = setTimeout(() => {
     const t = e.touches[0]
-    ctxMenu.value = { show: true, x: t.clientX, y: t.clientY, msg }
+    ctxMenu.value = { show: true, x: clampX(t.clientX), y: clampY(t.clientY), msg }
   }, 500)
+}
+
+function clampX(x: number) {
+  return Math.min(x, window.innerWidth - 160)
+}
+function clampY(y: number) {
+  return Math.min(y, window.innerHeight - 320)
 }
 
 function onMsgTouchEnd() {
@@ -439,10 +450,32 @@ function onSelectConversation(conv: { type: number; parentID: number }) {
   const c = chat.conversations.find((x) => x.parentID === conv.parentID && x.type === conv.type)
   if (c) {
     if (chat.currentChat?.parentId === conv.parentID && chat.currentChat?.type === conv.type) {
-      chat.closeConversation()
+      closeMobileChat()
     } else {
+      const wasInChat = !!chat.currentChat
       chat.selectConversation(c)
+      if (isMobile.value && !wasInChat) {
+        location.hash = 'chat'
+      }
     }
+  }
+}
+
+function backToSidebar() {
+  closeMobileChat()
+}
+
+function closeMobileChat() {
+  if (isMobile.value && location.hash === '#chat') {
+    history.back()
+  } else {
+    chat.closeConversation()
+  }
+}
+
+function onHashChange() {
+  if (isMobile.value && location.hash !== '#chat' && chat.currentChat) {
+    chat.closeConversation()
   }
 }
 
@@ -485,17 +518,37 @@ watch(
 
 onMounted(async () => {
   await chat.fetchConversations()
+  window.addEventListener('hashchange', onHashChange)
+  // On mobile, always start at sidebar; clean up stale hash
+  if (isMobile.value) {
+    if (chat.currentChat) chat.closeConversation()
+    if (location.hash === '#chat') history.back()
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('hashchange', onHashChange)
 })
 </script>
 
 <template>
-  <div class="chat-shell">
-    <ChatSidebar @select="onSelectConversation" />
+  <div class="chat-shell" :class="{ 'chat-shell--mobile': isMobile, 'chat-shell--chat-open': chat.currentChat }">
+    <div class="chat-pane chat-pane--sidebar">
+      <ChatSidebar @select="onSelectConversation" />
+    </div>
 
-    <div class="chat-main">
+    <div class="chat-pane chat-pane--main">
       <v-card class="glass-card" height="100%" style="display: flex; flex-direction: column">
         <!-- Header -->
         <div v-if="chat.currentChat" class="pa-3 d-flex align-center" style="flex-shrink: 0">
+          <v-btn
+            v-if="isMobile"
+            icon="mdi-chevron-left"
+            variant="text"
+            size="small"
+            class="mr-1"
+            @click="backToSidebar"
+          />
           <v-avatar size="36" class="mr-2">
             <v-img
               :src="
@@ -624,9 +677,55 @@ onMounted(async () => {
   height: calc(100vh - 140px);
   gap: 16px;
 }
-.chat-main {
+
+.chat-pane--sidebar {
+  width: 300px;
+  flex-shrink: 0;
+}
+
+.chat-pane--main {
   flex: 1;
   min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .chat-shell {
+    height: calc(100dvh - 112px);
+    gap: 0;
+  }
+
+  .chat-shell--mobile {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .chat-shell--mobile .chat-pane--sidebar,
+  .chat-shell--mobile .chat-pane--main {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  }
+
+  /* Sidebar: visible by default, slides left when chat is open */
+  .chat-shell--mobile.chat-shell--chat-open .chat-pane--sidebar {
+    transform: translateX(-40%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Main: slides in from right when chat is open */
+  .chat-shell--mobile .chat-pane--main {
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .chat-shell--mobile.chat-shell--chat-open .chat-pane--main {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 /* ── Context menu ── */

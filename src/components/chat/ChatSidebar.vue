@@ -98,7 +98,7 @@ function formatConvTime(ts: number | string) {
 </template>
 
 <style scoped>
-.chat-sidebar { width: 300px; flex-shrink: 0; }
+.chat-sidebar { width: 100%; height: 100%; }
 .conv-item {
   display: flex; align-items: center; cursor: pointer;
   border-radius: 12px; transition: background 0.15s ease;
