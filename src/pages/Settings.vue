@@ -387,7 +387,7 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
       </div>
       <div v-show="tab === 'core'" style="max-width: 720px; margin: 0 auto">
         <v-card class="glass-card" style="margin-bottom: 12px">
-          <v-tabs v-model="sectionTab" color="primary" density="compact" grow>
+          <v-tabs v-model="sectionTab" color="primary" density="compact">
             <v-tab
               v-for="s in configSections"
               :key="s.title"
@@ -455,7 +455,6 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
                         variant="outlined"
                         density="compact"
                         hide-details
-                        style="width: 250px"
                         :loading="coreSaveLoading[key]"
                         :error-messages="fieldErrors[key] || ''"
                         @focus="cacheOriginal(key)"
@@ -582,8 +581,7 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
                       variant="outlined"
                       density="compact"
                       hide-details
-                      style="width: 250px"
-                      :loading="coreSaveLoading[key]"
+                                            :loading="coreSaveLoading[key]"
                       :error-messages="fieldErrors[key] || ''"
                       @focus="cacheOriginal(key)"
                       @update:model-value="(v: string) => updateDraft(key, v)"
@@ -628,7 +626,7 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
                       {{ item.description }}
                     </div>
                   </div>
-                  <div class="d-flex align-center">
+                  <div class="config-control">
                     <v-switch
                       v-if="item.type === 'Boolean'"
                       :model-value="item.value as boolean"
@@ -653,8 +651,7 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
                         variant="outlined"
                         density="compact"
                         hide-details
-                        style="width: 250px"
-                        :loading="protocolSaveLoading[`${name}.${key}`]"
+                                                :loading="protocolSaveLoading[`${name}.${key}`]"
                         @focus="cacheProtocolOriginal(name, key)"
                         @update:model-value="
                           (v: string) => {
@@ -672,8 +669,7 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
                       variant="outlined"
                       density="compact"
                       hide-details
-                      style="width: 250px"
-                      :loading="protocolSaveLoading[`${name}.${key}`]"
+                                            :loading="protocolSaveLoading[`${name}.${key}`]"
                       @focus="cacheProtocolOriginal(name, key)"
                       @update:model-value="(v: string) => updateProtocolDraft(name, key, v)"
                       @blur="commitProtocolField(name, key)"
@@ -734,8 +730,7 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
                   variant="outlined"
                   density="compact"
                   hide-details
-                  style="width: 250px"
-                  @update:model-value="
+                                    @update:model-value="
                     (v: string) => {
                       const n = Number(v)
                       if (!isNaN(n)) updateWebuiDraft(key, n)
@@ -749,8 +744,7 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
                   variant="outlined"
                   density="compact"
                   hide-details
-                  style="width: 250px"
-                  :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                                    :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
                   @update:model-value="(v: string) => updateWebuiDraft(key, v)"
                   @click:append-inner="showPassword = !showPassword"
                 />
@@ -760,8 +754,7 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
                   variant="outlined"
                   density="compact"
                   hide-details
-                  style="width: 250px"
-                  @update:model-value="(v: string) => updateWebuiDraft(key, v)"
+                                    @update:model-value="(v: string) => updateWebuiDraft(key, v)"
                 />
               </div>
             </div>
@@ -834,12 +827,29 @@ onUnmounted(() => window.removeEventListener('scroll', updateActiveSection))
   border-bottom: none;
 }
 .config-control {
-  display: flex;
-  align-items: center;
   flex-shrink: 0;
+  width: 250px;
 }
 .section-card {
   scroll-margin-top: 100px;
+}
+
+@media (max-width: 600px) {
+  .config-row {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px;
+  }
+  .config-row .flex-grow-1 {
+    margin-right: 0 !important;
+    width: 100%;
+  }
+  .config-control {
+    width: 100%;
+  }
+  .section-card {
+    scroll-margin-top: 140px;
+  }
 }
 
 /* Prevent v-tabs-window from clipping protocol config controls */
