@@ -219,6 +219,7 @@ GET /api/plugin
       "description": "R!",
       "version": "1.1.3",
       "auth": [101, 106],
+      "menu": [],
     },
     {
       "authCode": 10002,
@@ -229,6 +230,7 @@ GET /api/plugin
       "description": "玩啥呢 不叫我",
       "version": "1.0.0",
       "auth": [101, 106, 161],
+      "menu": [],
     },
     {
       "authCode": 10003,
@@ -242,6 +244,7 @@ GET /api/plugin
         20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
         150, 151, 160, 161, 162, 180,
       ],
+      "menu": [],
     },
   ],
   "message": null,
@@ -308,7 +311,8 @@ POST /api/plugin/{authCode}/info
     "author": "落花茗",
     "description": "R!",
     "auth": [101, 106],
-    "pluginType": 0
+    "pluginType": 0,
+    "menu": []
   },
   "message": null
 }
@@ -345,7 +349,8 @@ POST /api/plugin/{authCode}/enable
     "author": "落花茗",
     "description": "R!",
     "version": "1.1.3",
-    "auth": [101, 106]
+    "auth": [101, 106],
+    "menu": []
   },
   "message": null
 }
@@ -382,7 +387,8 @@ POST /api/plugin/{authCode}/disable
     "author": "落花茗",
     "description": "R!",
     "version": "1.1.3",
-    "auth": [101, 106]
+    "auth": [101, 106],
+    "menu": []
   },
   "message": null
 }
@@ -422,7 +428,8 @@ POST /api/plugin/{authCode}/reload
     "auth": [
       20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
       150, 151, 160, 161, 162, 180
-    ]
+    ],
+    "menu": []
   },
   "message": null
 }
@@ -458,7 +465,8 @@ POST /api/plugin/reload-all
       "author": "落花茗",
       "description": "R!",
       "version": "1.1.3",
-      "auth": [101, 106]
+      "auth": [101, 106],
+      "menu": ["菜单"]
     },
     {
       "authCode": 10005,
@@ -468,7 +476,8 @@ POST /api/plugin/reload-all
       "author": "落花茗",
       "description": "玩啥呢 不叫我",
       "version": "1.0.0",
-      "auth": [101, 106, 161]
+      "auth": [101, 106, 161],
+      "menu": []
     },
     {
       "authCode": 10006,
@@ -481,7 +490,8 @@ POST /api/plugin/reload-all
       "auth": [
         20, 30, 101, 103, 106, 110, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 140,
         150, 151, 160, 161, 162, 180
-      ]
+      ],
+      "menu": []
     }
   ],
   "message": null
@@ -523,7 +533,8 @@ Content-Type: multipart/form-data
       "author": "作者",
       "description": "描述",
       "version": "1.0.0",
-      "auth": [101, 106]
+      "auth": [101, 106],
+      "menu": []
     },
     "existed": true
   }

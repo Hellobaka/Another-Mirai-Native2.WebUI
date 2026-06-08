@@ -34,3 +34,7 @@ export function addPlugin(dll: File, json: File) {
     timeout: 60000,
   })
 }
+
+export function callPluginMenu(authCode: number, menuName: string) {
+  return http.post<ApiResponse<null>>(`/plugin/${authCode}/menu?menuName=${encodeURIComponent(menuName)}`)
+}

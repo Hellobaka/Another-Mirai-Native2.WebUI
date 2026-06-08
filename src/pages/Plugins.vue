@@ -11,6 +11,7 @@ import {
   reloadPlugin,
   reloadAllPlugins,
   addPlugin,
+  callPluginMenu,
 } from '@/api/plugin'
 import {
   type PluginDto,
@@ -35,6 +36,8 @@ const reloadAllLoading = ref(false)
 
 const confirmReloadPlugin = ref<PluginDto | null>(null)
 const confirmReloadAll = ref(false)
+const confirmMenuPlugin = ref<PluginDetail | null>(null)
+const confirmMenuName = ref('')
 
 // ── Sort ──
 type SortKey = 'enabled' | 'name' | 'author'
@@ -230,6 +233,7 @@ async function togglePlugin(plugin: PluginDto) {
       await enablePlugin(plugin.authCode)
     }
     await fetchPlugins()
+    syncDetail()
   } finally {
     actionLoading.value = null
   }
@@ -237,6 +241,21 @@ async function togglePlugin(plugin: PluginDto) {
 
 function reloadOneBtn(plugin: PluginDto) {
   confirmReloadPlugin.value = plugin
+}
+
+function toggleDetail(plugin: PluginDto) {
+  togglePlugin(plugin)
+}
+
+function reloadDetail(plugin: PluginDto) {
+  reloadOneBtn(plugin)
+}
+
+// Keep detail in sync when plugins list changes
+function syncDetail() {
+  if (!detail.value) return
+  const updated = plugins.value.find((p) => p.authCode === detail.value!.authCode)
+  if (updated) detail.value = { ...detail.value, ...updated }
 }
 
 async function doReloadOne() {
@@ -247,6 +266,7 @@ async function doReloadOne() {
   try {
     await reloadPlugin(plugin.authCode)
     await fetchPlugins()
+    syncDetail()
     notify.success(`${plugin.pluginName} 已重载`)
   } catch {
     notify.error('重载失败')
@@ -270,6 +290,29 @@ async function doReloadAll() {
     notify.error('重载失败')
   } finally {
     reloadAllLoading.value = false
+  }
+}
+
+function menuBtnClick(plugin: PluginDetail, name: string) {
+  confirmMenuPlugin.value = plugin
+  confirmMenuName.value = name
+}
+
+async function doCallMenu() {
+  const plugin = confirmMenuPlugin.value
+  const name = confirmMenuName.value
+  confirmMenuPlugin.value = null
+  confirmMenuName.value = ''
+  if (!plugin) return
+  try {
+    const res = await callPluginMenu(plugin.authCode, name)
+    if (res.data.code === 0) {
+      notify.success(`菜单 "${name}" 已调用`)
+    } else {
+      notify.error(res.data.message || '调用失败')
+    }
+  } catch {
+    notify.error('调用失败')
   }
 }
 
@@ -570,6 +613,60 @@ onUnmounted(() => {
               <span v-for="a in detail.auth" :key="a" class="auth-tag">{{ authLabel(a) }}</span>
             </div>
           </v-card-text>
+
+          <v-divider />
+          <v-card-actions class="pa-3">
+            <v-btn
+              variant="tonal"
+              :color="detail.enabled ? 'warning' : 'success'"
+              size="small"
+              @click="toggleDetail(detail)"
+            >
+              {{ detail.enabled ? '禁用' : '启用' }}
+            </v-btn>
+
+            <template v-if="detail.enabled">
+              <!-- Menu split -->
+              <v-menu location="top">
+                <template #activator="{ props: menuProps }">
+                  <v-btn
+                    style="padding: 0 10px"
+                    variant="tonal"
+                    color="secondary"
+                    size="small"
+                    v-bind="menuProps"
+                  >
+                    菜单
+                    <!-- <v-icon icon="mdi-menu-down" size="16" class="ml-1" /> -->
+                  </v-btn>
+                </template>
+                <v-list v-if="detail.menu?.length" density="compact">
+                  <v-list-item
+                    v-for="m in detail.menu"
+                    :key="m"
+                    :title="m"
+                    @click="menuBtnClick(detail, m)"
+                  />
+                </v-list>
+                <v-list v-else density="compact">
+                  <v-list-item disabled title="暂无菜单" />
+                </v-list>
+              </v-menu>
+
+              <!-- Reload -->
+              <v-btn
+                variant="tonal"
+                color="primary"
+                size="small"
+                style="padding: 0 10px"
+                @click="reloadDetail(detail)"
+              >
+                重载
+              </v-btn>
+            </template>
+            <v-spacer />
+            <v-btn variant="text" size="small" @click="detailOpen = false">关闭</v-btn>
+          </v-card-actions>
         </v-card>
       </template>
     </v-dialog>
@@ -760,6 +857,22 @@ onUnmounted(() => {
           <v-spacer />
           <v-btn variant="text" @click="confirmReloadAll = false">取消</v-btn>
           <v-btn variant="tonal" color="primary" @click="doReloadAll">确认</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Confirm: Call plugin menu -->
+    <v-dialog v-model="confirmMenuPlugin" max-width="400" persistent>
+      <v-card>
+        <v-card-title class="text-body-1">确认调用菜单</v-card-title>
+        <v-card-text>
+          WebUI 不会显示弹出的菜单，请确认是否继续调用菜单
+          <strong>"{{ confirmMenuName }}"</strong>？
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="confirmMenuPlugin = null">取消</v-btn>
+          <v-btn variant="tonal" color="primary" @click="doCallMenu">确认调用</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

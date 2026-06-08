@@ -13,6 +13,7 @@ export interface PluginDto {
 /** 插件详细信息 (POST /api/plugin/{authCode}/info) */
 export interface PluginDetail extends PluginDto {
   pluginType: number
+  menu?: string[]
 }
 
 /** PluginType 枚举 */
