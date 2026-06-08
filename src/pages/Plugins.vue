@@ -33,6 +33,9 @@ const loading = ref(true)
 const actionLoading = ref<number | null>(null)
 const reloadAllLoading = ref(false)
 
+const confirmReloadPlugin = ref<PluginDto | null>(null)
+const confirmReloadAll = ref(false)
+
 // ── Sort ──
 type SortKey = 'enabled' | 'name' | 'author'
 const sortKey = ref<SortKey>('enabled')
@@ -232,7 +235,14 @@ async function togglePlugin(plugin: PluginDto) {
   }
 }
 
-async function reloadOne(plugin: PluginDto) {
+function reloadOneBtn(plugin: PluginDto) {
+  confirmReloadPlugin.value = plugin
+}
+
+async function doReloadOne() {
+  const plugin = confirmReloadPlugin.value
+  if (!plugin) return
+  confirmReloadPlugin.value = null
   actionLoading.value = plugin.authCode
   try {
     await reloadPlugin(plugin.authCode)
@@ -245,7 +255,12 @@ async function reloadOne(plugin: PluginDto) {
   }
 }
 
-async function reloadAll() {
+function reloadAllBtn() {
+  confirmReloadAll.value = true
+}
+
+async function doReloadAll() {
+  confirmReloadAll.value = false
   reloadAllLoading.value = true
   try {
     const res = await reloadAllPlugins()
@@ -350,7 +365,7 @@ onUnmounted(() => {
             color="primary"
             prepend-icon="mdi-refresh"
             :loading="reloadAllLoading"
-            @click="reloadAll"
+            @click="reloadAllBtn"
           >
             重载全部
           </v-btn>
@@ -371,9 +386,9 @@ onUnmounted(() => {
           :style="{ animationDelay: `${idx * 40}ms` }"
           class="plugin-col"
         >
-          <v-card class="plugin-card glass-card" height="100%" :border="true">
+          <v-card class="plugin-card glass-card d-flex flex-column" height="100%" :border="true">
             <!-- Status + Header -->
-            <div class="pa-4 pb-0">
+            <div class="pa-4 pb-0" style="flex-shrink: 0">
               <div class="d-flex align-center mb-3">
                 <v-avatar :color="statusColor(plugin.enabled)" size="36" class="plugin-avatar">
                   <v-icon
@@ -399,13 +414,19 @@ onUnmounted(() => {
               </div>
 
               <!-- Description -->
-              <p
+              <div
                 v-if="plugin.description"
-                class="text-caption text-medium-emphasis mb-3 line-clamp-2"
-                style="min-height: 2.4em"
+                class="text-caption text-medium-emphasis mb-3 line-clamp-2 description-text"
+                style="height: 3em"
               >
                 {{ plugin.description }}
-              </p>
+                <v-tooltip activator="parent" location="top" max-width="320">
+                  {{ plugin.description }}
+                </v-tooltip>
+              </div>
+              <div v-else class="text-caption text-medium-emphasis mb-3" style="height: 3em">
+                &nbsp;
+              </div>
 
               <!-- AppId -->
               <div class="text-caption mb-3">
@@ -414,7 +435,7 @@ onUnmounted(() => {
             </div>
 
             <!-- Auth tags -->
-            <div class="px-4" style="min-height: 52px">
+            <div class="px-4" style="height: 66px; flex-shrink: 0">
               <div v-if="plugin.auth.length" class="auth-scroll d-flex flex-wrap ga-1 mb-2">
                 <span v-for="a in plugin.auth.slice(0, 10)" :key="a" class="auth-tag">{{
                   authLabel(a)
@@ -428,7 +449,7 @@ onUnmounted(() => {
             <v-spacer />
 
             <!-- Actions -->
-            <div class="pa-3 pt-0">
+            <div class="pa-3 pt-0" style="flex-shrink: 0">
               <v-divider class="mb-2" />
               <div class="d-flex ga-2 align-center">
                 <v-btn
@@ -451,7 +472,7 @@ onUnmounted(() => {
                   height="32"
                   :loading="actionLoading === plugin.authCode"
                   class="flex-shrink-0"
-                  @click="reloadOne(plugin)"
+                  @click="reloadOneBtn(plugin)"
                 />
               </div>
             </div>
@@ -713,6 +734,35 @@ onUnmounted(() => {
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Confirm: Reload single plugin -->
+    <v-dialog v-model="confirmReloadPlugin" max-width="400" persistent>
+      <v-card>
+        <v-card-title class="text-body-1">确认重载</v-card-title>
+        <v-card-text>
+          确定要重载插件
+          <strong>{{ confirmReloadPlugin?.pluginName }}</strong> 吗？插件将被卸载后重新加载。
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="confirmReloadPlugin = null">取消</v-btn>
+          <v-btn variant="tonal" color="primary" @click="doReloadOne">确认</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Confirm: Reload all plugins -->
+    <v-dialog v-model="confirmReloadAll" max-width="400" persistent>
+      <v-card>
+        <v-card-title class="text-body-1">确认重载全部</v-card-title>
+        <v-card-text> 确定要重载全部插件吗？所有插件将被卸载后重新加载。 </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="confirmReloadAll = false">取消</v-btn>
+          <v-btn variant="tonal" color="primary" @click="doReloadAll">确认</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -764,7 +814,6 @@ onUnmounted(() => {
 }
 
 .auth-scroll {
-  max-height: 60px;
   overflow-y: auto;
 }
 
@@ -855,5 +904,12 @@ onUnmounted(() => {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>
