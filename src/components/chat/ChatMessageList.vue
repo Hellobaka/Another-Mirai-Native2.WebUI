@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useNotifyStore } from '@/stores/notify'
 import { getHistory } from '@/api/chat'
@@ -156,6 +156,11 @@ watch(
     showScrollBtn.value = false
     if (cooldownTimer) clearTimeout(cooldownTimer)
     loadCooldown.value = false
+    // Reset scroll position: in column-reverse, scrollTop=0 = visual bottom.
+    // Without this, switching conversations retains old scroll offset.
+    nextTick(() => {
+      if (messagesEl.value) messagesEl.value.scrollTop = 0
+    })
   },
 )
 
