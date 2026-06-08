@@ -11,7 +11,13 @@ import {
   reloadPlugin,
   reloadAllPlugins,
 } from '@/api/plugin'
-import { type PluginDto, type PluginDetail, type PluginChangedPayload, PluginTypeLabels, authLabel } from '@/models'
+import {
+  type PluginDto,
+  type PluginDetail,
+  type PluginChangedPayload,
+  PluginTypeLabels,
+  authLabel,
+} from '@/models'
 import { SignalREvents } from '@/signalr/events'
 
 const app = useAppStore()
@@ -24,6 +30,17 @@ const search = ref('')
 const loading = ref(true)
 const actionLoading = ref<number | null>(null)
 const reloadAllLoading = ref(false)
+
+// ── Sort ──
+type SortKey = 'enabled' | 'name' | 'author'
+const sortKey = ref<SortKey>('enabled')
+const sortDesc = ref(false)
+
+const sortOptions: { value: SortKey; title: string }[] = [
+  { value: 'enabled', title: '启用状态' },
+  { value: 'name', title: '插件名称' },
+  { value: 'author', title: '插件作者' },
+]
 
 const detailOpen = ref(false)
 const detail = ref<PluginDetail | null>(null)
@@ -43,6 +60,22 @@ const filteredPlugins = computed(() => {
       p.author.toLowerCase().includes(q) ||
       p.pluginId.toLowerCase().includes(q),
   )
+})
+
+const sortedPlugins = computed(() => {
+  const list = [...filteredPlugins.value]
+  const dir = sortDesc.value ? -1 : 1
+  list.sort((a, b) => {
+    if (sortKey.value === 'enabled') {
+      return (Number(b.enabled) - Number(a.enabled)) * dir
+    }
+    if (sortKey.value === 'name') {
+      return a.pluginName.localeCompare(b.pluginName) * dir
+    }
+    // author
+    return a.author.localeCompare(b.author) * dir
+  })
+  return list
 })
 
 const enabledCount = computed(() => plugins.value.filter((p) => p.enabled).length)
@@ -162,6 +195,21 @@ onUnmounted(() => {
           clearable
           style="max-width: 320px"
         />
+        <v-select
+          v-model="sortKey"
+          :items="sortOptions"
+          label="排序"
+          variant="outlined"
+          density="compact"
+          hide-details
+          style="max-width: 140px"
+        />
+        <v-btn
+          :icon="sortDesc ? 'mdi-sort-descending' : 'mdi-sort-ascending'"
+          variant="text"
+          size="small"
+          @click="sortDesc = !sortDesc"
+        />
         <v-spacer />
         <div class="d-flex align-center ga-2">
           <span class="text-caption text-medium-emphasis">
@@ -185,7 +233,7 @@ onUnmounted(() => {
     <v-fade-transition>
       <v-row v-if="!loading">
         <v-col
-          v-for="(plugin, idx) in filteredPlugins"
+          v-for="(plugin, idx) in sortedPlugins"
           :key="plugin.authCode"
           cols="12"
           sm="6"
@@ -237,7 +285,7 @@ onUnmounted(() => {
             </div>
 
             <!-- Auth tags -->
-            <div class="px-4" style="min-height: 52px;">
+            <div class="px-4" style="min-height: 52px">
               <div v-if="plugin.auth.length" class="auth-scroll d-flex flex-wrap ga-1 mb-2">
                 <span v-for="a in plugin.auth.slice(0, 10)" :key="a" class="auth-tag">{{
                   authLabel(a)
@@ -282,7 +330,7 @@ onUnmounted(() => {
         </v-col>
 
         <!-- Empty -->
-        <v-col v-if="filteredPlugins.length === 0" cols="12">
+        <v-col v-if="sortedPlugins.length === 0" cols="12">
           <v-card class="glass-card pa-8 text-center">
             <v-icon icon="mdi-puzzle-outline" size="56" class="text-medium-emphasis mb-3" />
             <div class="text-h6 text-medium-emphasis mb-1">没有找到插件</div>
