@@ -133,6 +133,7 @@ export interface ChatMessage {
   message: MessageItemBase[]  // parsed message chain
   msgId: number
   recalled: boolean
+  pluginName?: string     // plugin that handled this message
 }
 
 // Send message request

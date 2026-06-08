@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getConversations, getHistory, sendMessage, getFriendNick, getGroupName, getGroupMemberCard, clearUnread as clearUnreadApi } from '@/api/chat'
+import { getConversations, getHistory, sendMessage, getFriendNick, getGroupName, getGroupMemberCard, clearUnread as clearUnreadApi, convertMessageChain } from '@/api/chat'
 import { useHubStore } from './hub'
 import { SignalREvents } from '@/signalr/events'
-import { ChatHistoryType } from '@/models'
-import type { ChatConversation, ChatMessage, SendMessageRequest, GroupMsgPayload, PrivateMsgPayload, MsgRecallPayload, GroupMemberChangedPayload, GroupBanPayload, MessageItemBase } from '@/models'
+import { ChatHistoryType, MessageItemType } from '@/models'
+import type { ChatConversation, ChatMessage, SendMessageRequest, GroupMsgPayload, PrivateMsgPayload, MsgRecallPayload, GroupMemberChangedPayload, GroupBanPayload, GroupMessageSendPayload, PrivateMessageSendPayload, MessageItemBase } from '@/models'
 
 export const useChatStore = defineStore('chat', () => {
   const conversations = ref<ChatConversation[]>([])
@@ -342,6 +342,60 @@ export const useChatStore = defineStore('chat', () => {
         message: data.msg,
         time: data.time,
         recalled: false,
+      },
+      ChatHistoryType.Private,
+      data.qq,
+    )
+  })
+
+  hub.on(SignalREvents.OnGroupMessageSend, async (data: GroupMessageSendPayload) => {
+    let message: MessageItemBase[]
+    try {
+      const res = await convertMessageChain(data.msg)
+      message =
+        res.data.code === 0 && res.data.data.message?.length
+          ? res.data.data.message
+          : [{ messageItemType: MessageItemType.Text, content: data.msg } as MessageItemBase]
+    } catch {
+      message = [{ messageItemType: MessageItemType.Text, content: data.msg } as MessageItemBase]
+    }
+    appendRealTimeMessage(
+      {
+        id: 0, msgId: data.msgId,
+        type: ChatHistoryType.Group,
+        parentID: data.group,
+        senderID: botQQ.value,
+        message,
+        time: new Date().toISOString(),
+        recalled: false,
+        pluginName: data.plugin?.pluginName,
+      },
+      ChatHistoryType.Group,
+      data.group,
+    )
+  })
+
+  hub.on(SignalREvents.OnPrivateMessageSend, async (data: PrivateMessageSendPayload) => {
+    let message: MessageItemBase[]
+    try {
+      const res = await convertMessageChain(data.msg)
+      message =
+        res.data.code === 0 && res.data.data.message?.length
+          ? res.data.data.message
+          : [{ messageItemType: MessageItemType.Text, content: data.msg } as MessageItemBase]
+    } catch {
+      message = [{ messageItemType: MessageItemType.Text, content: data.msg } as MessageItemBase]
+    }
+    appendRealTimeMessage(
+      {
+        id: 0, msgId: data.msgId,
+        type: ChatHistoryType.Private,
+        parentID: data.qq,
+        senderID: botQQ.value,
+        message,
+        time: new Date().toISOString(),
+        recalled: false,
+        pluginName: data.plugin?.pluginName,
       },
       ChatHistoryType.Private,
       data.qq,
