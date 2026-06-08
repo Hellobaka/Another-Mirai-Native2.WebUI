@@ -461,8 +461,7 @@ function fmtUnknown(item: unknown): string {
 .msg-image-loading--inline {
   min-height: 60px;
   min-width: 80px;
-  display: inline-block;
-  vertical-align: middle;
+  display: block;
   margin: 2px 0;
 }
 .msg-image-skeleton {
