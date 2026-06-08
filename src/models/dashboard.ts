@@ -20,8 +20,8 @@ export interface DashboardInfoData {
   dotNetRuntimeVersion: string
   /** 工作目录 */
   workingDirectory: string
-  /** 磁盘可用空间（GB） */
-  diskFreeSpaceInGB: number
+  /** 磁盘已用空间（GB） */
+  diskUsedSpaceInGB: number
   /** 磁盘总空间（GB） */
   diskTotalSpaceInGB: number
 }

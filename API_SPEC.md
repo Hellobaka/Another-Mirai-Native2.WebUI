@@ -133,7 +133,7 @@ GET /api/dashboard/base-information
     "loadedPluginCount": 0,
     "dotNetRuntimeVersion": ".NET 9.0.12",
     "workingDirectory": "D:\\Code\\Another-Mirai-Native2",
-    "diskFreeSpaceInGB": 1024.11,
+    "diskUsedSpaceInGB": 1024.11,
     "diskTotalSpaceInGB": 2048.22,
   },
   "message": null,

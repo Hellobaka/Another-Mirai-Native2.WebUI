@@ -391,9 +391,7 @@ onUnmounted(() => {
                 <CpuMemoryRing
                   :value="
                     info.diskTotalSpaceInGB > 0
-                      ? ((info.diskTotalSpaceInGB - info.diskFreeSpaceInGB) /
-                          info.diskTotalSpaceInGB) *
-                        100
+                      ? (info.diskUsedSpaceInGB / info.diskTotalSpaceInGB) * 100
                       : 0
                   "
                   label="磁盘占用"
@@ -423,9 +421,9 @@ onUnmounted(() => {
                   }}</span>
                 </div>
                 <div class="resource-metric">
-                  <span class="metric-label">磁盘可用 / 总量</span>
+                  <span class="metric-label">磁盘已用 / 总量</span>
                   <span class="metric-val"
-                    >{{ info.diskFreeSpaceInGB.toFixed(1) }} GB /
+                    >{{ info.diskUsedSpaceInGB.toFixed(1) }} GB /
                     {{ info.diskTotalSpaceInGB.toFixed(1) }} GB</span
                   >
                 </div>
