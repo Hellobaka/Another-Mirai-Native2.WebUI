@@ -497,12 +497,13 @@ Content-Type: multipart/form-data
 
 **参数:**
 
-| 参数   | 类型     | 说明                         |
-| ------ | -------- | ---------------------------- |
-| `dll`  | file     | 插件 DLL 文件（必填）        |
-| `json` | file     | 插件 JSON 清单文件（必填）   |
+| 参数   | 类型 | 说明                       |
+| ------ | ---- | -------------------------- |
+| `dll`  | file | 插件 DLL 文件（必填）      |
+| `json` | file | 插件 JSON 清单文件（必填） |
 
 **约束:**
+
 - DLL 扩展名必须为 `.dll`
 - JSON 文件名需与 DLL 同名（`plugin.dll` + `plugin.json`）
 - 请求体限制 50MB
@@ -514,27 +515,30 @@ Content-Type: multipart/form-data
 {
   "code": 0,
   "data": {
-    "authCode": 10007,
-    "enabled": false,
-    "pluginId": "me.cqp.example.Plugin",
-    "pluginName": "示例插件",
-    "author": "作者",
-    "description": "描述",
-    "version": "1.0.0",
-    "auth": [101, 106]
+    "plugin": {
+      "authCode": 10007,
+      "enabled": false,
+      "pluginId": "me.cqp.example.Plugin",
+      "pluginName": "示例插件",
+      "author": "作者",
+      "description": "描述",
+      "version": "1.0.0",
+      "auth": [101, 106]
+    },
+    "existed": true
   }
 }
 ```
 
 **Response 失败:**
 
-| 状态码 | message                              | 说明                         |
-| ------ | ------------------------------------ | ---------------------------- |
-| 400    | 请选择要上传的插件 DLL 文件          | dll 为空                     |
-| 400    | 仅支持 DLL 格式的插件文件            | 扩展名不是 .dll              |
-| 400    | 请选择要上传的插件 JSON 清单文件     | json 为空                    |
-| 400    | 添加插件失败，检查 DLL 与 JSON 是否有效 | AddPlugin 返回 false         |
-| 500    | 由于服务器内部错误，添加插件失败     | 文件写入或加载异常           |
+| 状态码 | message                                 | 说明                 |
+| ------ | --------------------------------------- | -------------------- |
+| 400    | 请选择要上传的插件 DLL 文件             | dll 为空             |
+| 400    | 仅支持 DLL 格式的插件文件               | 扩展名不是 .dll      |
+| 400    | 请选择要上传的插件 JSON 清单文件        | json 为空            |
+| 400    | 添加插件失败，检查 DLL 与 JSON 是否有效 | AddPlugin 返回 false |
+| 500    | 由于服务器内部错误，添加插件失败        | 文件写入或加载异常   |
 
 ### 3.7 调用插件菜单
 
@@ -544,10 +548,10 @@ POST /api/plugin/{authCode}/menu?menuName={name}
 
 **参数:**
 
-| 参数       | 类型   | 说明                 |
-| ---------- | ------ | -------------------- |
+| 参数       | 类型   | 说明                   |
+| ---------- | ------ | ---------------------- |
 | `authCode` | int    | 插件授权码（路径参数） |
-| `menuName` | string | 菜单名称（必填）     |
+| `menuName` | string | 菜单名称（必填）       |
 
 触发指定插件的菜单事件，返回事件处理结果。
 
@@ -562,10 +566,10 @@ POST /api/plugin/{authCode}/menu?menuName={name}
 
 **Response 失败:**
 
-| 状态码 | message                        | 说明                         |
-| ------ | ------------------------------ | ---------------------------- |
-| 404    | 未找到对应 AuthCode 的插件     | 插件不存在                   |
-| 400    | 菜单名称不能为空               | menuName 为空                |
+| 状态码 | message                    | 说明          |
+| ------ | -------------------------- | ------------- |
+| 404    | 未找到对应 AuthCode 的插件 | 插件不存在    |
+| 400    | 菜单名称不能为空           | menuName 为空 |
 
 ---
 

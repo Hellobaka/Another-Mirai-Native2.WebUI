@@ -24,3 +24,13 @@ export function reloadPlugin(authCode: number) {
 export function reloadAllPlugins() {
   return http.post<ApiResponse<PluginDto[]>>('/plugin/reload-all')
 }
+
+export function addPlugin(dll: File, json: File) {
+  const form = new FormData()
+  form.append('dll', dll)
+  form.append('json', json)
+  return http.post<ApiResponse<{ plugin: PluginDto; existed: boolean }>>('/plugin/add', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
+  })
+}

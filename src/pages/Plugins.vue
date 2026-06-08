@@ -10,6 +10,7 @@ import {
   disablePlugin,
   reloadPlugin,
   reloadAllPlugins,
+  addPlugin,
 } from '@/api/plugin'
 import {
   type PluginDto,
@@ -19,6 +20,7 @@ import {
   authLabel,
 } from '@/models'
 import { SignalREvents } from '@/signalr/events'
+import { getErrorMessage } from '@/api/client'
 
 const app = useAppStore()
 const notify = useNotifyStore()
@@ -41,6 +43,130 @@ const sortOptions: { value: SortKey; title: string }[] = [
   { value: 'name', title: '插件名称' },
   { value: 'author', title: '插件作者' },
 ]
+
+// ── Add plugin ──
+const addOpen = ref(false)
+const addDll = ref<File | null>(null)
+const addJson = ref<File | null>(null)
+const addUploading = ref(false)
+const addError = ref('')
+const addMeta = ref<{
+  pluginName?: string
+  author?: string
+  version?: string
+  description?: string
+} | null>(null)
+const dragDll = ref(false)
+const dragJson = ref(false)
+
+function acceptFile(file: File, ext: string): boolean {
+  return file.name.toLowerCase().endsWith(ext)
+}
+
+function routeDroppedFiles(files: FileList | File[] | null) {
+  if (!files || addUploading.value) return
+  const list = Array.from(files)
+  const dll = list.find((f) => acceptFile(f, '.dll')) || null
+  const json = list.find((f) => acceptFile(f, '.json')) || null
+  if (dll) onDllChange(dll)
+  if (json) onJsonChange(json)
+}
+
+function onDrop(e: DragEvent) {
+  dragDll.value = false
+  dragJson.value = false
+  e.preventDefault()
+  routeDroppedFiles(e.dataTransfer?.files ?? null)
+}
+
+function dragOver(e: DragEvent) {
+  e.preventDefault()
+  if (addUploading.value) return
+  dragDll.value = true
+  dragJson.value = true
+}
+
+function dragLeave() {
+  dragDll.value = false
+  dragJson.value = false
+}
+
+function baseName(f: File) {
+  return f.name.replace(/\.[^.]+$/, '')
+}
+
+function onDllChange(files: File | File[] | null) {
+  const file = Array.isArray(files) ? files[0] : files
+  addDll.value = file ?? null
+  addError.value = ''
+}
+
+async function onJsonChange(files: File | File[] | null) {
+  const file = Array.isArray(files) ? files[0] : files
+  addJson.value = file ?? null
+  addError.value = ''
+  addMeta.value = null
+  if (!file) return
+  try {
+    const text = await file.text()
+    const obj = JSON.parse(text)
+    addMeta.value = {
+      pluginName: obj?.pluginName || obj?.name,
+      author: obj?.author,
+      version: obj?.version,
+      description: obj?.description,
+    }
+  } catch {
+    addError.value = 'JSON 文件格式无效'
+  }
+}
+
+function validateFiles(): boolean {
+  if (!addDll.value || !addJson.value) {
+    addError.value = '请选择 DLL 文件和 JSON 文件'
+    return false
+  }
+  if (baseName(addDll.value) !== baseName(addJson.value)) {
+    addError.value = 'DLL 与 JSON 文件名必须一致'
+    return false
+  }
+  return true
+}
+
+async function doAdd() {
+  if (!validateFiles()) return
+  addUploading.value = true
+  addError.value = ''
+  try {
+    const res = await addPlugin(addDll.value!, addJson.value!)
+    if (res.data.code === 0) {
+      const name = res.data.data.plugin?.pluginName || '插件'
+      notify.success(
+        res.data.data.existed ? `${name} 添加成功，重载插件来使插件更新` : `${name} 已添加`,
+      )
+      addOpen.value = false
+      addDll.value = null
+      addJson.value = null
+      addMeta.value = null
+      await fetchPlugins()
+    } else {
+      addError.value = res.data.message || '添加失败'
+    }
+  } catch (e) {
+    addError.value = getErrorMessage(e, '上传失败，请检查网络连接')
+  } finally {
+    addUploading.value = false
+  }
+}
+
+function closeAdd() {
+  if (addUploading.value) return
+  addOpen.value = false
+  addDll.value = null
+  addJson.value = null
+  addMeta.value = null
+  addError.value = ''
+}
 
 const detailOpen = ref(false)
 const detail = ref<PluginDetail | null>(null)
@@ -216,6 +342,9 @@ onUnmounted(() => {
             {{ enabledCount }} / {{ plugins.length }} 已启用
           </span>
           <v-divider vertical length="24" class="mx-1" />
+          <v-btn variant="tonal" color="success" prepend-icon="mdi-plus" @click="addOpen = true">
+            添加插件
+          </v-btn>
           <v-btn
             variant="tonal"
             color="primary"
@@ -423,6 +552,167 @@ onUnmounted(() => {
         </v-card>
       </template>
     </v-dialog>
+
+    <!-- Add Plugin Dialog -->
+    <v-dialog
+      v-model="addOpen"
+      max-width="480"
+      :persistent="addUploading"
+      @click:outside="closeAdd"
+    >
+      <v-card class="glass-card">
+        <v-toolbar density="compact" color="transparent" class="px-4">
+          <template #prepend>
+            <v-icon icon="mdi-puzzle-plus" size="22" color="primary" />
+          </template>
+          <v-toolbar-title class="text-body-1">添加插件</v-toolbar-title>
+          <template #append>
+            <v-btn
+              icon="mdi-close"
+              variant="text"
+              size="small"
+              :disabled="addUploading"
+              @click="closeAdd"
+            />
+          </template>
+        </v-toolbar>
+
+        <v-divider />
+
+        <v-card-text class="pt-4">
+          <v-alert
+            v-if="addError"
+            type="error"
+            variant="tonal"
+            density="compact"
+            class="mb-3"
+            closable
+          >
+            {{ addError }}
+          </v-alert>
+
+          <div class="d-flex ga-4">
+            <!-- DLL drop zone -->
+            <label
+              class="drop-zone flex-grow-1"
+              :class="{ 'drop-zone--drag': dragDll, 'drop-zone--done': !!addDll }"
+              @dragover="dragOver($event)"
+              @dragleave="dragLeave()"
+              @drop="onDrop($event)"
+            >
+              <input
+                type="file"
+                accept=".dll"
+                class="drop-input"
+                :disabled="addUploading"
+                @change="
+                  (e: Event) => {
+                    const t = e.target as HTMLInputElement
+                    onDllChange(t.files?.[0] ?? null)
+                  }
+                "
+              />
+              <template v-if="addDll">
+                <v-icon icon="mdi-file-code-outline" size="22" color="primary" class="mb-1" />
+                <span class="drop-filename">{{ addDll.name }}</span>
+              </template>
+              <template v-else>
+                <v-icon
+                  icon="mdi-file-upload-outline"
+                  size="24"
+                  class="text-medium-emphasis mb-1"
+                />
+                <span class="drop-label">DLL 文件</span>
+                <span class="drop-hint">拖拽或点击选择</span>
+              </template>
+            </label>
+
+            <!-- JSON drop zone -->
+            <label
+              class="drop-zone flex-grow-1"
+              :class="{ 'drop-zone--drag': dragJson, 'drop-zone--done': !!addJson }"
+              @dragover="dragOver($event)"
+              @dragleave="dragLeave()"
+              @drop="onDrop($event)"
+            >
+              <input
+                type="file"
+                accept=".json"
+                class="drop-input"
+                :disabled="addUploading"
+                @change="
+                  (e: Event) => {
+                    const t = e.target as HTMLInputElement
+                    onJsonChange(t.files?.[0] ?? null)
+                  }
+                "
+              />
+              <template v-if="addJson">
+                <v-icon icon="mdi-code-json" size="22" color="primary" class="mb-1" />
+                <span class="drop-filename">{{ addJson.name }}</span>
+              </template>
+              <template v-else>
+                <v-icon
+                  icon="mdi-file-upload-outline"
+                  size="24"
+                  class="text-medium-emphasis mb-1"
+                />
+                <span class="drop-label">JSON 清单</span>
+                <span class="drop-hint">拖拽或点击选择</span>
+              </template>
+            </label>
+          </div>
+
+          <div class="text-caption text-medium-emphasis mt-2">
+            DLL 与 JSON 文件名必须一致（如 Plugin.dll + Plugin.json）
+          </div>
+
+          <!-- JSON preview -->
+          <v-card
+            v-if="addMeta"
+            variant="flat"
+            class="mt-3 pa-3"
+            style="background: rgba(var(--v-theme-on-surface), 0.03)"
+          >
+            <div class="text-caption text-medium-emphasis mb-2">解析的元数据</div>
+            <v-row density="compact">
+              <v-col v-if="addMeta.pluginName" cols="6">
+                <span class="text-caption text-medium-emphasis">名称</span>
+                <div class="text-body-2">{{ addMeta.pluginName }}</div>
+              </v-col>
+              <v-col v-if="addMeta.author" cols="6">
+                <span class="text-caption text-medium-emphasis">作者</span>
+                <div class="text-body-2">{{ addMeta.author }}</div>
+              </v-col>
+              <v-col v-if="addMeta.version" cols="6">
+                <span class="text-caption text-medium-emphasis">版本</span>
+                <div class="text-body-2">v{{ addMeta.version }}</div>
+              </v-col>
+            </v-row>
+            <div v-if="addMeta.description" class="mt-2">
+              <span class="text-caption text-medium-emphasis">描述</span>
+              <div class="text-body-2">{{ addMeta.description }}</div>
+            </div>
+          </v-card>
+        </v-card-text>
+
+        <v-divider />
+        <v-card-actions class="pa-3">
+          <v-spacer />
+          <v-btn variant="text" :disabled="addUploading" @click="closeAdd">取消</v-btn>
+          <v-btn
+            variant="tonal"
+            color="success"
+            style="padding: 0 15px"
+            prepend-icon="mdi-upload"
+            :loading="addUploading"
+            @click="doAdd"
+          >
+            上传
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -495,6 +785,61 @@ onUnmounted(() => {
 }
 .event-row:last-child {
   border-bottom: none;
+}
+
+/* ── Drop zones ── */
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 110px;
+  padding: 16px 12px;
+  border: 2px dashed rgba(var(--v-theme-on-surface), 0.22);
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+  position: relative;
+}
+.drop-zone:hover {
+  border-color: rgba(var(--v-theme-primary), 0.4);
+  background: rgba(var(--v-theme-primary), 0.03);
+}
+.drop-zone--drag {
+  border-color: rgb(var(--v-theme-primary)) !important;
+  background: rgba(var(--v-theme-primary), 0.08) !important;
+}
+.drop-zone--done {
+  border-style: solid;
+  border-color: rgba(var(--v-theme-success), 0.5);
+  background: rgba(var(--v-theme-success), 0.04);
+}
+.drop-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+}
+.drop-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: rgba(var(--v-theme-on-surface), 0.6);
+}
+.drop-hint {
+  font-size: 0.68rem;
+  color: rgba(var(--v-theme-on-surface), 0.35);
+  margin-top: 2px;
+}
+.drop-filename {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: rgba(var(--v-theme-on-surface), 0.8);
+  word-break: break-all;
+  text-align: center;
+  line-height: 1.3;
 }
 
 .plugin-col {
