@@ -307,8 +307,8 @@ onUnmounted(() => {
   right: 0;
   z-index: 200;
   background: rgba(var(--v-theme-surface), 0.88) !important;
-  backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   border-top: 1px solid rgba(var(--v-theme-on-surface), 0.08) !important;
 }
 
