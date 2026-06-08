@@ -89,6 +89,7 @@ function closeOnMobile() {
 const APP_VERSION = '1.0.0'
 
 onMounted(async () => {
+  if (isMobile.value) app.drawerOpen = false
   app.fetchWebUIConfig()
   fetchBotInfo()
   hub.on(SignalREvents.CurrentBotInfoChanged, onBotInfoChanged)
