@@ -46,23 +46,39 @@ function toggleAutoScroll(v: boolean) {
   if (v) scrollToBottom()
 }
 
-function scrollToBottom() {
+function findScrollable(): HTMLElement | null {
   const root = getTableRoot()
-  if (!root) return
-  const el =
-    root.querySelector('.v-table__wrapper') ||
-    root.querySelector('.v-data-table-virtual__wrapper') ||
-    root.querySelector('[style*="overflow"]')
-  if (!el) return
+  if (!root) return null
 
-  // Virtual table renders rows in batches — scroll twice with a gap
-  // to let the second batch render
+  // Try known Vuetify selectors first
+  const selectors = [
+    '.v-table__wrapper',
+    '.v-data-table__wrapper',
+    '.v-data-table-virtual__wrapper',
+    '.v-virtual-scroll__container',
+  ]
+  for (const sel of selectors) {
+    const el = root.querySelector(sel) as HTMLElement | null
+    if (el && el.scrollHeight > el.clientHeight) return el
+  }
+
+  // Fallback: find any element with vertical overflow within the table card
+  for (const node of root.querySelectorAll('*')) {
+    const el = node as HTMLElement
+    if (el.scrollHeight <= el.clientHeight + 5) continue
+    const s = window.getComputedStyle(el)
+    if (s.overflowY === 'auto' || s.overflowY === 'scroll') return el
+  }
+  return null
+}
+
+function scrollToBottom() {
+  const el = findScrollable()
+  if (!el) return
   el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  // Virtual table renders in batches — scroll again after rendering
   setTimeout(() => {
-    const el2 =
-      root.querySelector('.v-table__wrapper') ||
-      root.querySelector('.v-data-table-virtual__wrapper') ||
-      root.querySelector('[style*="overflow"]')
+    const el2 = findScrollable()
     if (el2) el2.scrollTo({ top: el2.scrollHeight, behavior: 'smooth' })
   }, 200)
 }
@@ -265,7 +281,7 @@ function onLogAdded(data: LogAddedPayload) {
 
 function onLogStatusUpdated(data: LogStatusUpdatedPayload) {
   const item = items.value.find((l) => l.id === data.logId)
-  if (item) item.status = data.status
+  if (item) item.status = data.status.replace('√', '✔️').replace('x', '❌')
 }
 
 onMounted(async () => {
