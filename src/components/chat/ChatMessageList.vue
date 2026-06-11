@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useChatStore } from '@/stores/chat'
-import { useNotifyStore } from '@/stores/notify'
 import { getHistory } from '@/api/chat'
 import { ChatHistoryType } from '@/models'
 import type { ChatMessage as ChatMessageType } from '@/models'
@@ -9,7 +8,6 @@ import ChatMessageBubble from './ChatMessageBubble.vue'
 import { isTextOnly } from './chatUtils'
 
 const chat = useChatStore()
-const notify = useNotifyStore()
 
 const props = defineProps<{
   pendingSends: Record<string, string>
@@ -25,24 +23,21 @@ const emit = defineEmits<{
 }>()
 
 const messagesEl = ref<HTMLElement | null>(null)
+const topSentinel = ref<HTMLElement | null>(null)
+const bottomSentinel = ref<HTMLElement | null>(null)
 const loadingMore = ref(false)
 const showScrollBtn = ref(false)
 const lazyPage = ref(1)
-const loadCooldown = ref(false)
-let cooldownTimer: ReturnType<typeof setTimeout> | null = null
+let topObserver: IntersectionObserver | null = null
+let bottomObserver: IntersectionObserver | null = null
 
-const MAX_VISIBLE = 100
-const KEEP_VISIBLE = 50
 const GROUP_WINDOW_MS = 3 * 60 * 1000
 const MAX_GROUP = 7
 
-// ── Reversed messages for column-reverse layout ──
-// Newest first in DOM → appears at visual bottom with column-reverse
 const reversedMessages = computed<ChatMessageType[]>(() => {
   return [...chat.messages].reverse()
 })
 
-// ── Message grouping ──
 type GroupPos = 'first' | 'middle' | 'last' | null
 
 function msgKey(msg: ChatMessageType): string {
@@ -86,7 +81,6 @@ function isGroupable(
   return isTextOnly(a.message) && isTextOnly(b.message)
 }
 
-// ── Scroll (column-reverse: scrollTop=0 → visual bottom, scrollTop=max → visual top) ──
 function scrollToBottom(smooth = false) {
   const el = messagesEl.value
   if (!el) return
@@ -97,28 +91,35 @@ function scrollToBottom(smooth = false) {
   }
 }
 
-function onScroll() {
-  if (ctxMenuOpen) return
-  const el = messagesEl.value
-  if (!el) return
-  // In column-reverse, scrollTop measures distance from visual bottom
-  const distFromBottom = el.scrollTop
-  showScrollBtn.value = distFromBottom > 200
-  // Trim old messages when near bottom
-  if (distFromBottom < 200 && chat.messages.length > MAX_VISIBLE) trimOldMessages()
-  // Load older when scrolled near visual top
-  if (loadingMore.value || loadCooldown.value || !chat.hasMore) return
-  const distFromTop = el.scrollHeight - el.scrollTop - el.clientHeight
-  if (distFromTop < 80) loadOlder()
-}
+function setupObservers() {
+  topObserver?.disconnect()
+  bottomObserver?.disconnect()
 
-function trimOldMessages() {
-  if (chat.messages.length <= MAX_VISIBLE) return
-  const removeCount = chat.messages.length - KEEP_VISIBLE
-  // Remove oldest messages (at beginning of chat.messages = end of reversed = visual top)
-  chat.messages = chat.messages.slice(removeCount)
-  chat.hasMore = true
-  lazyPage.value = 1
+  const root = messagesEl.value
+  if (!root) return
+
+  if (topSentinel.value) {
+    topObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !loadingMore.value && chat.hasMore) {
+          loadOlder()
+        }
+      },
+      { root, rootMargin: '400px 0px 0px 0px', threshold: 0 },
+    )
+    topObserver.observe(topSentinel.value)
+  }
+
+  if (bottomSentinel.value) {
+    bottomObserver = new IntersectionObserver(
+      (entries) => {
+        const visible = entries[0].isIntersecting
+        showScrollBtn.value = !visible
+      },
+      { root, threshold: 0 },
+    )
+    bottomObserver.observe(bottomSentinel.value)
+  }
 }
 
 async function loadOlder() {
@@ -130,10 +131,10 @@ async function loadOlder() {
     if (res.data.code === 0 && res.data.data.length > 0) {
       const existingIds = new Set(chat.messages.map((m) => m.msgId))
       const fresh = (res.data.data as ChatMessageType[]).filter((m) => !existingIds.has(m.msgId))
-      if (fresh.length > 0) chat.messages = [...fresh, ...chat.messages]
+      if (fresh.length > 0) {
+        chat.messages = [...fresh, ...chat.messages]
+      }
       chat.hasMore = res.data.data.length >= 50 && fresh.length > 0
-      // Column-reverse naturally maintains scroll-from-bottom when content is
-      // added at the visual top (end of flex), so no manual scroll restoration needed.
     } else {
       chat.hasMore = false
     }
@@ -141,11 +142,6 @@ async function loadOlder() {
     lazyPage.value--
   } finally {
     loadingMore.value = false
-    loadCooldown.value = true
-    cooldownTimer = setTimeout(() => {
-      loadCooldown.value = false
-      cooldownTimer = null
-    }, 500)
   }
 }
 
@@ -154,101 +150,112 @@ watch(
   () => {
     lazyPage.value = 1
     showScrollBtn.value = false
-    if (cooldownTimer) clearTimeout(cooldownTimer)
-    loadCooldown.value = false
-    // Reset scroll position: in column-reverse, scrollTop=0 = visual bottom.
-    // Without this, switching conversations retains old scroll offset.
     nextTick(() => {
       if (messagesEl.value) messagesEl.value.scrollTop = 0
+      setupObservers()
     })
   },
 )
 
-// Expose for parent
-let ctxMenuOpen = false
-function setCtxMenuOpen(v: boolean) {
-  ctxMenuOpen = v
-}
-defineExpose({ scrollToBottom, messagesEl, setCtxMenuOpen })
+onMounted(() => {
+  nextTick(() => setupObservers())
+})
+
+onUnmounted(() => {
+  topObserver?.disconnect()
+  bottomObserver?.disconnect()
+})
+
+
+defineExpose({ scrollToBottom, messagesEl })
 </script>
 
 <template>
-  <div ref="messagesEl" class="msg-scroll flex-grow-1 pa-3" @scroll="onScroll">
-    <!-- No chat selected: absolute-centered overlay -->
-    <div v-if="!chat.currentChat" class="no-chat-overlay">
-      <v-icon icon="mdi-chat-outline" size="64" class="text-medium-emphasis mb-3" />
-      <div class="text-body-1 text-medium-emphasis">选择一个会话开始聊天</div>
-    </div>
-
-    <!-- Messages (newest first in DOM = visual bottom via column-reverse) -->
-    <template v-if="chat.currentChat">
-      <div
-        v-if="chat.messages.length === 0 && !chat.msgLoading"
-        class="text-center text-medium-emphasis pa-8"
-      >
-        <div class="text-caption">暂无消息</div>
+  <div class="msg-scroll-wrap flex-grow-1">
+    <div ref="messagesEl" class="msg-scroll pa-3">
+      <div v-if="!chat.currentChat" class="no-chat-overlay">
+        <v-icon icon="mdi-chat-outline" size="64" class="text-medium-emphasis mb-3" />
+        <div class="text-body-1 text-medium-emphasis">选择一个会话开始聊天</div>
       </div>
 
-      <template v-for="msg in reversedMessages" :key="msgKey(msg)">
-        <ChatMessageBubble
-          :id="'msg-' + msgKey(msg)"
-          :msg="msg"
-          :group-pos="msgGroupPos[msgKey(msg)] ?? null"
-          :is-self="msg.senderID === chat.botQQ"
-          :pending-state="
-            pendingSends[(msg as unknown as { _tempId?: string })._tempId || ''] || undefined
-          "
-          :reply-data="replyData"
-          @contextmenu="emit('contextmenu', $event, msg)"
-          @open-viewer="emit('open-viewer', $event)"
-          @at-click="emit('at-click', $event)"
-          @reply-click="emit('reply-click', $event)"
-          @retry-click="emit('retry-click', $event)"
-        />
+      <template v-if="chat.currentChat">
+        <div
+          v-if="chat.messages.length === 0 && !chat.msgLoading"
+          class="text-center text-medium-emphasis pa-8"
+        >
+          <div class="text-caption">暂无消息</div>
+        </div>
+
+        <div class="bottom-spring" />
+        <div ref="bottomSentinel" class="bottom-sentinel" />
+
+        <template v-for="msg in reversedMessages" :key="msgKey(msg)">
+          <ChatMessageBubble
+            :id="'msg-' + msgKey(msg)"
+            :msg="msg"
+            :group-pos="msgGroupPos[msgKey(msg)] ?? null"
+            :is-self="msg.senderID === chat.botQQ"
+            :pending-state="
+              pendingSends[(msg as unknown as { _tempId?: string })._tempId || ''] || undefined
+            "
+            :reply-data="replyData"
+            @contextmenu="emit('contextmenu', $event, msg)"
+            @open-viewer="emit('open-viewer', $event)"
+            @at-click="emit('at-click', $event)"
+            @reply-click="emit('reply-click', $event)"
+            @retry-click="emit('retry-click', $event)"
+          />
+        </template>
+
+        <div ref="topSentinel" class="top-sentinel" />
+
+        <div v-if="chat.msgLoading" class="text-center pa-4">
+          <v-progress-circular indeterminate size="24" width="2" color="primary" />
+        </div>
+
+        <div v-if="loadingMore" class="text-center pa-2">
+          <v-progress-circular indeterminate size="18" width="2" color="primary" />
+        </div>
       </template>
-    </template>
-
-    <!-- Loading indicators: at end of flex = visual top in column-reverse -->
-    <div v-if="chat.msgLoading" class="text-center pa-4">
-      <v-progress-circular indeterminate size="24" width="2" color="primary" />
-    </div>
-    <div v-if="loadingMore" class="text-center pa-2">
-      <v-progress-circular indeterminate size="18" width="2" color="primary" />
     </div>
 
-    <!-- Scroll-to-bottom button (shows when user scrolls up away from bottom) -->
-    <div class="scroll-bottom-wrap">
-      <v-btn
-        v-if="showScrollBtn"
-        icon="mdi-chevron-down"
-        size="small"
-        variant="tonal"
-        color="primary"
-        @click="scrollToBottom(true)"
-      />
-    </div>
+    <!-- Button outside the scroll container, positioned relative to the wrapper -->
+    <Transition name="scroll-btn">
+      <div v-if="showScrollBtn" class="scroll-bottom-wrap">
+        <v-btn
+          icon="mdi-chevron-down"
+          size="small"
+          variant="tonal"
+          color="primary"
+          @click="scrollToBottom(true)"
+        />
+      </div>
+    </Transition>
   </div>
 </template>
 
 <style scoped>
+.msg-scroll-wrap {
+  position: relative;
+  min-height: 0;
+}
+
 .msg-scroll {
   display: flex;
   flex-direction: column-reverse;
   overflow-y: auto;
-  scroll-behavior: smooth;
-  position: relative;
+  height: 100%;
 }
 
-/* Spring pseudo-element: fills remaining space at visual bottom,
-   pushing messages upward when content is short.
-   In column-reverse, ::before is the first flex child = visual bottom.
-   flex: 1 1 0 → grows to fill space, shrinks to 0 when overflowing. */
-.msg-scroll::before {
-  content: '';
+.bottom-spring {
   flex: 1 1 0;
 }
 
-/* No-chat overlay: absolute centered, outside normal flex flow */
+.bottom-sentinel {
+  height: 1px;
+  flex-shrink: 0;
+}
+
 .no-chat-overlay {
   position: absolute;
   inset: 0;
@@ -256,21 +263,29 @@ defineExpose({ scrollToBottom, messagesEl, setCtxMenuOpen })
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* Ensure it sits above the ::after pseudo-element */
   z-index: 1;
-  /* Prevent the overlay from participating in flex sizing */
   height: 100%;
 }
 
-.scroll-bottom-wrap {
-  position: sticky;
-  bottom: 12px;
-  display: flex;
-  justify-content: flex-end;
-  z-index: 2;
-  pointer-events: none;
+.top-sentinel {
+  height: 1px;
+  flex-shrink: 0;
 }
-.scroll-bottom-wrap > * {
-  pointer-events: auto;
+
+.scroll-bottom-wrap {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.scroll-btn-enter-active,
+.scroll-btn-leave-active {
+  transition: opacity 0.2s ease;
+}
+.scroll-btn-enter-from,
+.scroll-btn-leave-to {
+  opacity: 0;
 }
 </style>
