@@ -277,6 +277,12 @@ function openRename() {
   openNameDialog('rename', entry.name)
 }
 
+/** 右键菜单：选中目标条目后打开重命名对话框（保持模板单函数调用，避免 prettier 拆行） */
+function openRenameSelected(entry: FileEntry) {
+  selectOnly(entry)
+  openRename()
+}
+
 async function submitNameDialog() {
   const name = nameDialog.name.trim()
   if (!name) {
@@ -354,6 +360,12 @@ function openDelete() {
   if (!paths.length) return
   deleteDialog.paths = paths
   deleteDialog.open = true
+}
+
+/** 右键菜单：选中目标条目后打开删除确认（保持模板单函数调用，避免 prettier 拆行） */
+function openDeleteSelected(entry: FileEntry) {
+  selectOnly(entry)
+  openDelete()
 }
 
 async function doDelete() {
@@ -1063,18 +1075,12 @@ onBeforeUnmount(() => {
                           <v-list-item
                             prepend-icon="mdi-rename-outline"
                             title="重命名"
-                            @click="
-                              selectOnly(entry)
-                              openRename()
-                            "
+                            @click="openRenameSelected(entry)"
                           />
                           <v-list-item
                             prepend-icon="mdi-delete-outline"
                             title="删除"
-                            @click="
-                              selectOnly(entry)
-                              openDelete()
-                            "
+                            @click="openDeleteSelected(entry)"
                           />
                         </v-list>
                       </v-menu>
