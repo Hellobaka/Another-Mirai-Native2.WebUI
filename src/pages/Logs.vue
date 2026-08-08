@@ -90,7 +90,6 @@ function onPageSizeChange(v: number) {
   fetchLogs()
 }
 const search = ref('')
-const ascending = ref(false)
 
 const levelOptions = [
   { title: 'Debug', value: LogLevel.Debug },
@@ -167,23 +166,13 @@ function formatTime(iso: string): string {
 const resizableKeys = COLUMNS.filter((c) => c.key !== 'status').map((c) => c.key)
 const resizing = ref(false)
 let curKey = ''
-let nxtKey = ''
 let curStartWidth = 0
-let nxtStartWidth = 0
 let startPageX = 0
 let rafId = 0
 
-function getNextResizableKey(key: string): string {
-  const idx = resizableKeys.indexOf(key)
-  if (idx === -1 || idx === resizableKeys.length - 1) return ''
-  return resizableKeys[idx + 1]
-}
-
 function onResizeStart(key: string, e: MouseEvent) {
   curKey = key
-  nxtKey = getNextResizableKey(key)
   curStartWidth = getWidth(curKey)
-  nxtStartWidth = nxtKey ? getWidth(nxtKey) : 0
   startPageX = e.pageX
   resizing.value = true
   document.addEventListener('mousemove', onResizeMove)
@@ -198,11 +187,6 @@ function onResizeMove(e: MouseEvent) {
   if (rafId) cancelAnimationFrame(rafId)
   rafId = requestAnimationFrame(() => {
     columnWidths[curKey] = newCur
-
-    if (nxtKey) {
-      const newNxt = Math.max(20, nxtStartWidth - diffX)
-      columnWidths[nxtKey] = newNxt
-    }
   })
 }
 
@@ -210,7 +194,6 @@ function onResizeEnd() {
   if (rafId) cancelAnimationFrame(rafId)
   saveWidths({ ...columnWidths })
   curKey = ''
-  nxtKey = ''
   resizing.value = false
   document.removeEventListener('mousemove', onResizeMove)
   document.removeEventListener('mouseup', onResizeEnd)
@@ -416,6 +399,17 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+:deep(.v-table__wrapper > table) {
+  /* Fixed layout: column widths are decided by the header widths only,
+     long log content can no longer squeeze adjacent columns. */
+  table-layout: fixed;
+}
+
+:deep(.v-data-table__td) {
+  /* Long unbroken log text wraps inside its column instead of expanding it */
+  overflow-wrap: anywhere;
+}
+
 .resize-header-cell {
   position: relative;
   width: 100%;
