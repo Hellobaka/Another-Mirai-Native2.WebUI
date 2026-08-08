@@ -38,6 +38,8 @@ http.interceptors.response.use(
       window.location.replace('/login')
     }
     error.apiMessage = error.response?.data?.message || null
+    const errorData = error.response?.data as { data?: { errorType?: string } } | null
+    error.apiErrorType = errorData?.data?.errorType || null
     const retryAfter = error.response?.headers?.['retry-after']
     error.retryAfter = retryAfter ? Number(retryAfter) : null
     return Promise.reject(error)
@@ -48,6 +50,7 @@ http.interceptors.response.use(
 export function getErrorMessage(e: unknown, fallback: string): string {
   const err = e as {
     apiMessage?: string | null
+    apiErrorType?: string | null
     retryAfter?: number | null
     message?: string
     code?: string
@@ -65,6 +68,8 @@ export function getErrorMessage(e: unknown, fallback: string): string {
   }
 
   // API returned an error with a server message
+  // 文件被其他程序占用：统一友好提示（即使后端 message 缺失）
+  if (err.apiErrorType === 'file_in_use') return '文件被其他程序占用，请稍后重试'
   if (err.apiMessage) return err.apiMessage
   if (err.response?.data?.message) return err.response.data.message
 
@@ -77,6 +82,11 @@ export function getErrorMessage(e: unknown, fallback: string): string {
   if (err.message) return err.message
 
   return fallback
+}
+
+/** 提取后端返回的业务错误类型（如 file_in_use / sql_syntax_error） */
+export function getApiErrorType(e: unknown): string {
+  return (e as { apiErrorType?: string | null })?.apiErrorType || ''
 }
 
 export default http

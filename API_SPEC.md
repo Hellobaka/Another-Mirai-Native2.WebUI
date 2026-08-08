@@ -1741,6 +1741,419 @@ GET /api/cache/{type}/{file}
 
 ---
 
+## 9. 文件管理
+
+> 所有文件管理接口位于 `/api/files`，需 JWT 鉴权；`EnableFileManager` 为 `false` 时返回 403。
+> 路径统一使用**相对文件管理器根目录**的字符串，`/` 分隔；根目录用 `""` 或 `"."` 表示。
+> 根目录由 `conf/WebAPI_Config.json` 中的 `FileManagerRoot` 配置（空表示程序运行目录），**不能**通过 API 读取或修改。
+> 安全约束：路径会先规范化再校验，`..` 及尾随空格/点的变体、绝对路径、盘符、系统保留名称均被拒绝；指向根目录之外的符号链接/目录联接会被拒绝；复制时若目录内含越界链接或循环链接将中止。硬链接与“检查-使用”竞态（TOCTOU）属于本地攻击者残留风险。
+> 常见错误：400 参数/路径非法、403 功能未启用或越界、404 不存在、409 目标已存在、500 服务器异常。文件/数据库被其他程序占用时返回 400 且 `data.errorType` 为 `file_in_use`（`message` 为“文件被其他程序占用，请稍后重试”，`data.detail` 含原始错误）。
+
+### 9.1 浏览目录
+
+```
+GET /api/files?path=
+```
+
+**参数:**
+
+| 参数       | 类型   | 说明                                                         |
+| ---------- | ------ | ------------------------------------------------------------ |
+| `path`     | string | 相对根目录的路径，空表示根目录                               |
+| `encoding` | string | 可选。指定编码：`utf-8` / `gbk` / `gb18030` / `ansi` / `utf-16` / `utf-16be`；留空按自动探测 |
+
+**Response 成功:**
+
+```jsonc
+{
+  "code": 0,
+  "data": {
+    "root": "D:\\Another-Mirai-Native",
+    "path": "sub",
+    "parent": "",
+    "items": [
+      {
+        "name": "a.txt",
+        "path": "sub/a.txt",
+        "isDirectory": false,
+        "size": 1024,
+        "lastWriteTime": "2026-08-08T12:00:00",
+      },
+    ],
+  },
+}
+```
+
+### 9.2 新建文件夹
+
+```
+POST /api/files/mkdir
+```
+
+**Request:**
+
+```jsonc
+{ "path": "newdir" }
+```
+
+父目录不存在时自动创建；同名返回 409。
+
+### 9.3 新建文件
+
+```
+POST /api/files/mkfile
+```
+
+**Request:**
+
+```jsonc
+{ "path": "newdir/hello.txt", "content": "可选初始内容" }
+```
+
+同名返回 409。
+
+### 9.4 重命名
+
+```
+POST /api/files/rename
+```
+
+**Request:**
+
+```jsonc
+{ "path": "newdir/hello.txt", "newName": "world.txt" }
+```
+
+仅支持同一目录内改名；同名返回 409；文件名不能包含路径分隔符或系统保留名称。
+
+### 9.5 复制
+
+```
+POST /api/files/copy
+```
+
+**Request:**
+
+```jsonc
+{
+  "sources": ["newdir/hello.txt", "newdir/sub"],
+  "targetDir": "backup",
+}
+```
+
+目标已存在返回 409；不能把文件夹复制到其自身内部。
+源目录内若包含指向根目录外的链接，或检测到循环链接，将拒绝复制（400/403）。
+
+### 9.6 移动（剪切 + 粘贴）
+
+```
+POST /api/files/move
+```
+
+**Request:**
+
+```jsonc
+{
+  "sources": ["newdir/hello.txt"],
+  "targetDir": "backup",
+}
+```
+
+规则同复制，不能把文件夹移动到其自身内部。
+
+### 9.7 删除到回收站
+
+```
+POST /api/files/delete
+```
+
+**Request:**
+
+```jsonc
+{ "paths": ["newdir/hello.txt", "backup/sub"] }
+```
+
+删除进入系统回收站；失败时返回错误，不会回退为永久删除；不能删除根目录。
+
+### 9.8 读取文本文件
+
+```
+GET /api/files/text?path=newdir/hello.txt
+```
+
+默认自动识别编码（UTF-8 / UTF-16 / GBK / GB18030 / ANSI），返回时已去除 BOM；超过 10MB 或二进制文件返回 400。无 BOM 时按 UTF-8 → GBK → GB18030 → ANSI（系统 ANSI 代码页，中文系统即 GBK）依次尝试，全部失败时按 GBK 替换解码兜底（乱码也是解码结果，不报错）。指定 `encoding` 时按该编码解码，无法表示的字节以替换符显示（不报错）；未知编码名回退为自动探测。
+
+**Response 成功:**
+
+```jsonc
+{
+  "code": 0,
+  "data": {
+    "path": "newdir/hello.txt",
+    "content": "文件内容",
+    "encoding": "UTF-8",
+  },
+}
+```
+
+### 9.8.1 流式读取文本文件
+
+```
+GET /api/files/text/raw?path=newdir/hello.txt
+```
+
+以 `text/plain` 流式**原样返回文件字节**，服务器不做解码，只设置响应头 charset（`utf-8` / `utf-16le` / `utf-16be` / `gbk` / `gb18030` / ANSI 系统代码页），由浏览器按 charset 解码。指定 `encoding` 时 charset 直接取该编码；未指定时只读文件头（4KB）推断。上限同样为 10MB，二进制文件返回 400。
+
+### 9.9 写入文本文件
+
+```
+POST /api/files/text
+```
+
+**Request:**
+
+```jsonc
+{ "path": "newdir/hello.txt", "content": "新的内容", "encoding": "gbk" }
+```
+
+`encoding` 可选：`utf-8` / `gbk` / `gb18030` / `ansi` / `utf-16` / `utf-16be`，指定时按该编码写回（保留原 BOM），无法表示的字符以替换符保存（如 GBK 下为 `?`），不报错；留空按原文件识别的编码写回。文件不存在返回 404，内容上限 10MB；二进制文件拒绝保存（400），避免覆盖损坏。
+
+### 9.10 下载文件/文件夹
+
+```
+GET /api/files/download?path=newdir/hello.txt
+GET /api/files/download?path=a.txt&path=sub&path=docs
+```
+
+单个 `path` 为文件时直接返回文件流；单文件夹或多个 `path`（多选）时**流式打包为 ZIP 下载**，不产生临时文件。单个文件夹的 ZIP 名为 `<文件夹名>.zip`，多个条目为 `download.zip`，条目以各自名字作为 ZIP 顶层目录/文件。选择中存在同名条目返回 400。打包前会预检链接、循环链接与文件可读性，错误在响应开始前返回：包含指向根目录外的链接返回 403，检测到循环链接返回 400，文件被占用返回 `file_in_use`。
+
+### 9.11 上传文件
+
+```
+POST /api/files/upload
+Content-Type: multipart/form-data
+```
+
+**参数:**
+
+| 参数        | 类型        | 说明                          |
+| ----------- | ----------- | ----------------------------- |
+| `files`     | IFormFile[] | 上传的文件（可多个，字段名 `files`） |
+| `targetDir` | string      | 目标目录（相对根目录），默认根目录 |
+
+单请求上限 500MB；目标同名返回 409。
+
+### 9.12 SQLite 表/视图列表
+
+```
+GET /api/files/sqlite/tables?path=data/test.db
+```
+
+仅支持根目录内 `.db` / `.sqlite` / `.sqlite3` 文件。
+
+**Response 成功:**
+
+```jsonc
+{
+  "code": 0,
+  "data": [
+    { "name": "t1", "type": "table", "sql": "CREATE TABLE t1 (...)" },
+  ],
+}
+```
+
+### 9.13 SQLite 表结构
+
+```
+GET /api/files/sqlite/schema?path=data/test.db&table=t1
+```
+
+**Response 成功:**
+
+```jsonc
+{
+  "code": 0,
+  "data": {
+    "table": "t1",
+    "columns": [
+      { "name": "id", "dataType": "INTEGER", "notNull": false, "defaultValue": null, "primaryKey": 1 },
+    ],
+    "indexes": [
+      { "name": "idx_name", "unique": false, "columns": ["name"] },
+    ],
+  },
+}
+```
+
+### 9.14 SQLite 表数据分页预览
+
+```
+GET /api/files/sqlite/data?path=data/test.db&table=t1&page=1&pageSize=50
+```
+
+**参数:**
+
+| 参数       | 类型 | 说明                     |
+| ---------- | ---- | ------------------------ |
+| `page`     | int  | 页码，从 1 开始，默认 1  |
+| `pageSize` | int  | 每页条数，默认 50，最大 200 |
+
+**Response 成功:**
+
+```jsonc
+{
+  "code": 0,
+  "data": {
+    "columns": ["id", "name", "score"],
+    "rows": [[1, "alice", 90.5]],
+    "total": 2,
+    "page": 1,
+    "pageSize": 50,
+  },
+}
+```
+
+### 9.15 执行 SQLite SQL
+
+```
+POST /api/files/sqlite/query
+```
+
+**Request:**
+
+```jsonc
+{ "path": "data/test.db", "sql": "SELECT * FROM t1" }
+```
+
+支持任意 SQL（单条语句，不支持分号分隔多语句）；查询类结果最多返回 1000 行，超出标记 `truncated`。
+出于安全考虑，禁止 `ATTACH`、`DETACH` 与 `VACUUM INTO` 语句（返回 400），防止通过 SQL 访问根目录之外的文件。
+
+**Response 成功（查询类）:**
+
+```jsonc
+{
+  "code": 0,
+  "data": {
+    "type": "query",
+    "columns": ["id", "name"],
+    "rows": [[1, "alice"]],
+    "truncated": false,
+    "affectedRows": 0,
+  },
+}
+```
+
+**Response 成功（写入类）:**
+
+```jsonc
+{
+  "code": 0,
+  "data": {
+    "type": "execute",
+    "columns": null,
+    "rows": null,
+    "truncated": false,
+    "affectedRows": 1,
+  },
+}
+```
+
+**Response 失败:**
+
+```jsonc
+// 语法错误（HTTP 400）
+{
+  "code": 400,
+  "message": "SQL 语法错误：SQLite Error 1: 'near \"SELECT FROM\": syntax error'",
+  "data": { "errorType": "sql_syntax_error" },
+}
+```
+
+| 状态码 | message 前缀                     | 说明                                                         |
+| ------ | -------------------------------- | ------------------------------------------------------------ |
+| 400    | SQL 语法错误：...                | 语法错误，`data.errorType` 为 `sql_syntax_error`，前端可据此精确提示 |
+| 400    | SQL 执行失败：...                | 其他 SQLite 错误（表不存在、约束冲突、数据库被锁等），message 含真实错误 |
+
+---
+
+### 9.16 探测文件/文件夹大小
+
+```
+GET /api/files/size?path=data
+```
+
+**参数:**
+
+| 参数   | 类型   | 说明                         |
+| ------ | ------ | ---------------------------- |
+| `path` | string | 相对根目录的路径，空表示根目录 |
+
+文件返回自身字节数；文件夹递归统计所有文件的总字节数。指向根目录外的链接、循环链接与无法读取的文件不统计（不报错）。
+
+**Response 成功:**
+
+```jsonc
+{
+  "code": 0,
+  "data": { "size": 123456 },
+}
+```
+
+---
+
+### 9.17 按文件名搜索
+
+```
+GET /api/files/search?pattern=*.txt&path=data&limit=200
+```
+
+**参数:**
+
+| 参数      | 类型   | 说明                                                         |
+| --------- | ------ | ------------------------------------------------------------ |
+| `pattern` | string | 搜索关键字/通配符模式（必填）：支持 `*`（任意多个字符）与 `?`（单个字符）；无通配符时按包含匹配（忽略大小写） |
+| `path`    | string | 搜索起始目录，相对根目录，空表示根目录                       |
+| `limit`   | int    | 最多返回条数，默认 200，最大 1000                            |
+
+在起始目录下递归搜索文件与文件夹名。指向根目录外的链接与循环链接不搜索。`data.total` 为全部命中数（可能大于返回条数）。
+
+**Response 成功:**
+
+```jsonc
+{
+  "code": 0,
+  "data": {
+    "items": [
+      { "name": "a.txt", "path": "data/a.txt", "isDirectory": false, "size": 1024, "lastWriteTime": "2026-08-08T12:00:00" },
+    ],
+    "total": 12,
+  },
+}
+```
+
+---
+
+### 9.18 图片预览
+
+```
+GET /api/files/image?path=data/pic.png&access_token={token}
+```
+
+**参数:**
+
+| 参数          | 类型   | 说明                                                         |
+| ------------- | ------ | ------------------------------------------------------------ |
+| `path`        | string | 相对根目录的图片文件路径                                     |
+| `access_token` | string | 可选。JWT，供 `<img>` 等无法携带 Header 的场景直接引用       |
+
+以图片内容类型（`image/png` / `image/jpeg` / `image/gif` / `image/webp` 等）流式返回文件，浏览器可直接显示。仅支持图片文件，非图片返回 400；文件不存在返回 404。
+
+```html
+<img src="/api/files/image?path=data/pic.png&access_token=你的token" />
+```
+
+---
+
 # SignalR Hub
 
 ## 连接

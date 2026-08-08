@@ -138,24 +138,12 @@ export const useChatStore = defineStore('chat', () => {
   // ── Unread persistence ──
   const UNREAD_KEY = 'amn_chat_unread'
 
-  function loadUnreadCache(): Record<string, number> {
-    try { return JSON.parse(localStorage.getItem(UNREAD_KEY) || '{}') } catch { return {} }
-  }
-
   function saveUnreadCache(map: Record<string, number>) {
     localStorage.setItem(UNREAD_KEY, JSON.stringify(map))
   }
 
   function unreadCacheKey(type: number, parentId: number) {
     return `${type}:${parentId}`
-  }
-
-  function syncUnreadFromCache() {
-    const cache = loadUnreadCache()
-    for (const conv of conversations.value) {
-      const k = unreadCacheKey(conv.type, conv.parentID)
-      if (cache[k] !== undefined) conv.unreadCount = cache[k]
-    }
   }
 
   function flushUnreadToCache() {
