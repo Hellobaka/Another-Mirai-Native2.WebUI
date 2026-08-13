@@ -6,8 +6,8 @@ export interface FileEntry {
   path: string
   /** 是否为目录 */
   isDirectory: boolean
-  /** 文件大小（字节），目录通常为 0 */
-  size: number
+  /** 文件大小（字节），目录为 null */
+  size: number | null
   /** 最后写入时间 */
   lastWriteTime: string
 }

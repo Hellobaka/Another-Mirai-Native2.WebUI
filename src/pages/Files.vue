@@ -87,7 +87,7 @@ const sortedItems = computed(() => {
     const dir = sortDesc.value ? -1 : 1
     let cmp: number
     if (sortKey.value === 'size') {
-      cmp = a.size - b.size
+      cmp = (a.size ?? 0) - (b.size ?? 0)
     } else if (sortKey.value === 'lastWriteTime') {
       cmp = a.lastWriteTime.localeCompare(b.lastWriteTime)
     } else {
@@ -136,10 +136,14 @@ function isImageFile(name: string): boolean {
   return IMAGE_EXTS.has(ext)
 }
 
+let dirLoadSeq = 0
+
 async function loadDirectory(path: string) {
+  const seq = ++dirLoadSeq
   loading.value = true
   try {
     const res = await listDirectory(path)
+    if (seq !== dirLoadSeq) return
     if (res.data.code === 0) {
       const d = res.data.data
       currentPath.value = d.path
@@ -159,13 +163,16 @@ async function loadDirectory(path: string) {
       notify.error(res.data.message || '加载目录失败')
     }
   } catch (e) {
+    if (seq !== dirLoadSeq) return
     notify.error(getErrorMessage(e, '加载目录失败'))
   } finally {
-    loading.value = false
+    if (seq === dirLoadSeq) loading.value = false
   }
 }
 
 function refresh() {
+  // 目录内容可能已变化（新建/改名/删除/上传），失效已缓存的大小
+  folderSizes.value = {}
   loadDirectory(currentPath.value)
 }
 
@@ -330,6 +337,16 @@ async function paste() {
   pasteLoading.value = true
   try {
     const { mode: kind, sources } = clipboard.value
+    // 同目录粘贴：移动为无操作，复制必然同名冲突
+    const sameDir = sources.every((s) => {
+      const idx = s.lastIndexOf('/')
+      return (idx < 0 ? '' : s.slice(0, idx)) === currentPath.value
+    })
+    if (sameDir) {
+      notify.info(kind === 'copy' ? '源文件已在当前目录' : '已在同一目录')
+      if (kind === 'cut') clipboard.value = null
+      return
+    }
     const res =
       kind === 'copy'
         ? await copyEntries(sources, currentPath.value)
@@ -494,6 +511,7 @@ const searchTotal = ref(0)
 const searchError = ref('')
 let searchTimer: number | undefined
 let pendingSelectPath: string | null = null
+let searchSeq = 0
 
 function onSearchInput() {
   if (searchTimer) window.clearTimeout(searchTimer)
@@ -533,9 +551,11 @@ function onSearchFocus() {
 }
 
 async function doSearch(kw: string) {
+  const seq = ++searchSeq
   try {
     // 从当前浏览目录开始递归搜索
     const res = await searchFiles(kw, currentPath.value)
+    if (seq !== searchSeq) return
     if (res.data.code === 0) {
       searchResults.value = res.data.data.items
       searchTotal.value = res.data.data.total ?? res.data.data.items.length
@@ -546,19 +566,28 @@ async function doSearch(kw: string) {
       searchError.value = res.data.message || '搜索失败'
     }
   } catch (e) {
+    if (seq !== searchSeq) return
     searchResults.value = []
     searchTotal.value = 0
     searchError.value = getErrorMessage(e, '搜索失败')
   } finally {
-    searchLoading.value = false
-    searchSearched.value = true
+    if (seq === searchSeq) {
+      searchLoading.value = false
+      searchSearched.value = true
+    }
   }
 }
 
 function goSearchResult(entry: FileEntry) {
   pendingSelectPath = entry.path
   const idx = entry.path.lastIndexOf('/')
-  navigate(idx > 0 ? entry.path.slice(0, idx) : '')
+  const targetDir = idx > 0 ? entry.path.slice(0, idx) : ''
+  if (targetDir === currentPath.value) {
+    // 已在目标目录：直接重新加载以应用选中，避免路由无变化导致 pendingSelectPath 失效
+    loadDirectory(targetDir)
+  } else {
+    navigate(targetDir)
+  }
   closeSearch()
 }
 
@@ -600,6 +629,11 @@ function editSelected() {
 
 function closeEditor() {
   editorOpen.value = false
+}
+
+/** 编辑器内取消切换文件时，恢复原路径，避免内容与文件名错位 */
+function onRevertPath(path: string) {
+  editorPath.value = path
 }
 
 function onEditorSaved() {
@@ -649,8 +683,8 @@ function closeSqlite() {
 }
 
 // ── 展示辅助 ──
-function formatSize(size: number): string {
-  if (!size) return '—'
+function formatSize(size: number | null): string {
+  if (size === null) return '—'
   if (size < 1024) return `${size} B`
   const units = ['KB', 'MB', 'GB', 'TB']
   let v = size
@@ -866,7 +900,7 @@ onBeforeUnmount(() => {
               hide-details
               prepend-inner-icon="mdi-magnify"
               clearable
-              @input="onSearchInput"
+              @update:model-value="onSearchInput"
               @keyup.enter="onSearchEnter"
               @keydown.esc="closeSearch"
               @focus="onSearchFocus"
@@ -1053,6 +1087,8 @@ onBeforeUnmount(() => {
                             icon="mdi-dots-horizontal"
                             variant="text"
                             size="x-small"
+                            title="更多操作"
+                            aria-label="更多操作"
                           />
                         </template>
                         <v-list density="compact">
@@ -1117,8 +1153,9 @@ onBeforeUnmount(() => {
         </div>
 
         <transition name="editor-panel">
-          <div v-if="mdAndUp && editorOpen" class="split-right-wrap">
+          <div v-if="editorOpen" class="editor-mount" :class="{ 'editor-mount--desktop': mdAndUp }">
             <div
+              v-if="mdAndUp"
               class="split-divider"
               :class="{ 'split-divider--dragging': dragging }"
               @mousedown.prevent="startDrag"
@@ -1131,6 +1168,7 @@ onBeforeUnmount(() => {
                 :name="editorName"
                 @close="closeEditor"
                 @saved="onEditorSaved"
+                @revert-path="onRevertPath"
               />
             </div>
           </div>
@@ -1221,19 +1259,6 @@ onBeforeUnmount(() => {
       </div>
     </v-dialog>
 
-    <!-- 移动端：文本编辑器以全屏模态展示 -->
-    <v-dialog v-if="!mdAndUp" v-model="editorOpen" fullscreen transition="dialog-bottom-transition">
-      <div class="editor-dialog-body">
-        <FileEditorPanel
-          :open="editorOpen"
-          :path="editorPath"
-          :name="editorName"
-          @close="closeEditor"
-          @saved="onEditorSaved"
-        />
-      </div>
-    </v-dialog>
-
     <!-- 图片预览（复用 Chat 的 ImageViewer） -->
     <ImageViewer v-model:open="viewerOpen" v-model:src="viewerSrc" />
   </div>
@@ -1256,17 +1281,6 @@ onBeforeUnmount(() => {
 }
 
 .sqlite-overlay--boxed > * {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-/* 移动端文本编辑器全屏模态 */
-.editor-dialog-body {
-  height: 100%;
-  display: flex;
-}
-
-.editor-dialog-body > * {
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -1296,12 +1310,27 @@ onBeforeUnmount(() => {
   display: flex;
 }
 
-.split-right-wrap {
+.editor-mount {
   display: flex;
   gap: 10px;
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
+}
+
+.editor-mount--desktop {
+  position: relative;
+}
+
+/* 小屏：编辑器覆盖整个视口（等效全屏模态），组件保持挂载不丢状态 */
+@media (max-width: 959px) {
+  .editor-mount {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    padding: 12px;
+    background: rgb(var(--v-theme-surface));
+  }
 }
 
 .split-divider {
