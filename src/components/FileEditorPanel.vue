@@ -16,6 +16,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   saved: []
+  revertPath: [path: string]
 }>()
 
 const app = useAppStore()
@@ -108,6 +109,7 @@ const languageLabel = computed(() => {
 
 const loading = ref(false)
 const saving = ref(false)
+const dirty = ref(false)
 const encoding = ref('')
 const selectedEncoding = ref('')
 const error = ref('')
@@ -115,6 +117,9 @@ const languageId = ref('plaintext')
 const editorEl = ref<HTMLElement | null>(null)
 const showPathTooltip = ref(false)
 let suppressReadError = false
+let suppressDirty = false
+let contentLoadSeq = 0
+let lastPath = ''
 
 const encodingDisplay = computed(() => {
   if (selectedEncoding.value) {
@@ -129,6 +134,14 @@ const encodingDisplay = computed(() => {
 async function selectEncoding(value: string) {
   if (value === selectedEncoding.value) return
   const previous = selectedEncoding.value
+  if (dirty.value) {
+    confirmDiscard(() => applyEncoding(value, previous))
+    return
+  }
+  await applyEncoding(value, previous)
+}
+
+async function applyEncoding(value: string, previous: string) {
   // 切换编码期间不展示错误：解码失败时静默回退
   suppressReadError = true
   selectedEncoding.value = value
@@ -189,11 +202,28 @@ watch(
 
 watch(
   [() => props.open, () => props.path],
-  async ([open]) => {
+  async ([open, path]) => {
     if (!open) {
       disposeEditor()
       return
     }
+    // 打开同一路径（含取消切换后的恢复）：不重载，保留当前内容
+    if (path === lastPath) return
+    if (dirty.value && lastPath) {
+      confirmDiscard(
+        () => {
+          lastPath = path
+          selectedEncoding.value = ''
+          loadContent()
+        },
+        () => {
+          // 取消切换：让父组件把路径恢复，避免“内容与文件名错位”后误保存
+          emit('revertPath', lastPath)
+        },
+      )
+      return
+    }
+    lastPath = path
     selectedEncoding.value = ''
     await loadContent()
   },
@@ -201,11 +231,13 @@ watch(
 )
 
 async function loadContent(): Promise<boolean> {
+  const seq = ++contentLoadSeq
   loading.value = true
   error.value = ''
   let ok = false
   try {
     const res = await readTextFile(props.path, selectedEncoding.value)
+    if (seq !== contentLoadSeq) return false
     if (res.data.code === 0) {
       encoding.value = res.data.data.encoding
       await nextTick()
@@ -216,9 +248,10 @@ async function loadContent(): Promise<boolean> {
       error.value = res.data.message || '读取文件失败'
     }
   } catch (e) {
+    if (seq !== contentLoadSeq) return false
     if (!suppressReadError) error.value = getErrorMessage(e, '读取文件失败')
   } finally {
-    loading.value = false
+    if (seq === contentLoadSeq) loading.value = false
   }
   return ok
 }
@@ -239,12 +272,16 @@ function ensureEditor() {
     renderWhitespace: 'selection',
   })
   editor.onDidChangeModelContent(() => {
-    if (editor) charCount.value = editor.getValue().length
+    if (editor) {
+      charCount.value = editor.getValue().length
+      if (!suppressDirty) dirty.value = true
+    }
   })
   editor.onDidChangeCursorPosition((e) => {
     cursorLine.value = e.position.lineNumber
     cursorCol.value = e.position.column
   })
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => save())
 }
 
 function setModel(value: string, language: string) {
@@ -253,11 +290,14 @@ function setModel(value: string, language: string) {
     tabSize: indentSize.value,
     insertSpaces: indentStyle.value === 'spaces',
   })
+  suppressDirty = true
   editor.setModel(model)
+  suppressDirty = false
   if (currentModel) currentModel.dispose()
   currentModel = model
   languageId.value = language
   charCount.value = value.length
+  dirty.value = false
   cursorLine.value = 1
   cursorCol.value = 1
 }
@@ -274,6 +314,8 @@ function disposeEditor() {
   encoding.value = ''
   languageId.value = 'plaintext'
   charCount.value = 0
+  dirty.value = false
+  lastPath = ''
   cursorLine.value = 1
   cursorCol.value = 1
 }
@@ -302,6 +344,7 @@ async function save() {
     const res = await writeTextFile(props.path, editor.getValue(), selectedEncoding.value)
     if (res.data.code === 0) {
       notify.success('文件已保存')
+      dirty.value = false
       emit('saved')
     } else {
       error.value = res.data.message || '保存失败'
@@ -314,7 +357,39 @@ async function save() {
 }
 
 function close() {
-  emit('close')
+  confirmDiscard(() => emit('close'))
+}
+
+// ── 未保存更改确认 ──
+const discardDialog = ref(false)
+let pendingAction: (() => void) | null = null
+let pendingCancel: (() => void) | null = null
+
+function confirmDiscard(action: () => void, onCancel?: () => void) {
+  if (!dirty.value) {
+    action()
+    return
+  }
+  pendingAction = action
+  pendingCancel = onCancel || null
+  discardDialog.value = true
+}
+
+function doDiscard() {
+  discardDialog.value = false
+  const action = pendingAction
+  pendingAction = null
+  pendingCancel = null
+  dirty.value = false
+  action?.()
+}
+
+function cancelDiscard() {
+  discardDialog.value = false
+  const onCancel = pendingCancel
+  pendingAction = null
+  pendingCancel = null
+  onCancel?.()
 }
 
 function onInfoClick() {
@@ -490,6 +565,19 @@ onBeforeUnmount(() => {
         </v-menu>
       </template>
     </div>
+
+    <!-- 未保存更改确认 -->
+    <v-dialog v-model="discardDialog" max-width="400">
+      <v-card class="glass-card pa-4">
+        <v-card-title class="text-body-1 font-weight-bold px-0 pt-0">未保存的更改</v-card-title>
+        <v-card-text class="px-0"> 当前文件有未保存的修改，确定丢弃吗？ </v-card-text>
+        <v-card-actions class="px-0 pb-0">
+          <v-spacer />
+          <v-btn variant="text" @click="cancelDiscard">取消</v-btn>
+          <v-btn color="error" variant="tonal" @click="doDiscard">丢弃</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-card>
 </template>
 
