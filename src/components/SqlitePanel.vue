@@ -6,6 +6,12 @@ import { getSqliteData, getSqliteSchema, getSqliteTables, runSqliteQuery } from 
 import { getErrorMessage } from '@/api/client'
 import type { SqliteDataData, SqliteQueryResult, SqliteTableInfo } from '@/models'
 import type * as MonacoNs from 'monaco-editor'
+import {
+  buildUpdateSql,
+  cellText,
+  isReadonlySql,
+  rowKeyOf as buildRowKey,
+} from '@/utils/sqliteEdit'
 
 const props = defineProps<{
   dbPath: string
@@ -159,6 +165,9 @@ const totalPages = computed(() =>
   data.value ? Math.max(1, Math.ceil(data.value.total / data.value.pageSize)) : 1,
 )
 
+// 请求序号：目录/表/页快速切换时丢弃过期响应
+let tableLoadSeq = 0
+
 async function loadTables() {
   tablesLoading.value = true
   tablesError.value = ''
@@ -176,12 +185,13 @@ async function loadTables() {
   }
 }
 
-async function loadData() {
+async function loadData(seq = ++tableLoadSeq) {
   if (!selectedTable.value) return
   dataLoading.value = true
   editingCell.value = null
   try {
     const res = await getSqliteData(props.dbPath, selectedTable.value, page.value, pageSize.value)
+    if (seq !== tableLoadSeq) return
     if (res.data.code === 0) {
       data.value = res.data.data
       ensureColWidths(res.data.data.columns)
@@ -189,9 +199,10 @@ async function loadData() {
       notify.error(res.data.message || '加载数据失败')
     }
   } catch (e) {
+    if (seq !== tableLoadSeq) return
     notify.error(getErrorMessage(e, '加载数据失败'))
   } finally {
-    dataLoading.value = false
+    if (seq === tableLoadSeq) dataLoading.value = false
   }
 }
 
@@ -205,8 +216,9 @@ function openTable(name: string) {
     queryResult.value = null
     queryError.value = ''
     editedCells.value = {}
-    loadPkColumns()
-    loadData()
+    const seq = ++tableLoadSeq
+    loadPkColumns(seq)
+    loadData(seq)
   })
 }
 
@@ -226,9 +238,29 @@ function changePageSize(v: number) {
   })
 }
 
-async function runQuery() {
+const confirmRun = ref(false)
+const pendingRunSql = ref('')
+
+/** 执行前确认：写语句（UPDATE/DELETE/DROP/INSERT 等）需要二次确认 */
+function runQuery() {
   const statement = sql.value.trim()
   if (!statement || running.value) return
+  if (!isReadonlySql(statement)) {
+    pendingRunSql.value = statement
+    confirmRun.value = true
+    return
+  }
+  executeQuery(statement)
+}
+
+function confirmExecute() {
+  confirmRun.value = false
+  const statement = pendingRunSql.value
+  pendingRunSql.value = ''
+  if (statement) executeQuery(statement)
+}
+
+async function executeQuery(statement: string) {
   running.value = true
   queryError.value = ''
   queryErrorType.value = ''
@@ -251,12 +283,6 @@ async function runQuery() {
   }
 }
 
-function cellText(v: unknown): string {
-  if (v === null || v === undefined) return 'NULL'
-  if (typeof v === 'object') return JSON.stringify(v)
-  return String(v)
-}
-
 function displayCell(v: unknown): string {
   const s = cellText(v)
   return s.length > 200 ? `${s.slice(0, 200)}…` : s
@@ -269,7 +295,15 @@ function cellTitle(v: unknown): string | undefined {
 
 // ── 行内编辑（需主键定位行） ──
 const pkColumns = ref<string[]>([])
-const editedCells = ref<Record<string, Record<number, string>>>({})
+interface EditedCell {
+  original: unknown
+  text: string
+}
+interface EditedRow {
+  pk: unknown[]
+  cells: Record<number, EditedCell>
+}
+const editedCells = ref<Record<string, EditedRow>>({})
 const editingCell = ref<{ rowKey: string; colIndex: number; rowIndex: number } | null>(null)
 const editInput = ref('')
 const editInputEl = ref<HTMLInputElement | null>(null)
@@ -284,15 +318,28 @@ let discardAction: (() => void) | null = null
 
 const hasPk = computed(() => pkColumns.value.length > 0)
 const dirtyCount = computed(() =>
-  Object.values(editedCells.value).reduce((n, cols) => n + Object.keys(cols).length, 0),
+  Object.values(editedCells.value).reduce((n, row) => n + Object.keys(row.cells).length, 0),
 )
 const hasDirty = computed(() => dirtyCount.value > 0)
 
-async function loadPkColumns() {
+function pkValuesOf(row: unknown[]): unknown[] {
+  const columns = data.value?.columns ?? []
+  return pkColumns.value.map((pk) => {
+    const idx = columns.indexOf(pk)
+    return idx >= 0 ? row[idx] : null
+  })
+}
+
+function rowKeyOf(row: unknown[]): string {
+  return buildRowKey(pkValuesOf(row))
+}
+
+async function loadPkColumns(seq = tableLoadSeq) {
   pkColumns.value = []
   if (!selectedTable.value) return
   try {
     const res = await getSqliteSchema(props.dbPath, selectedTable.value)
+    if (seq !== tableLoadSeq) return
     if (res.data.code === 0) {
       pkColumns.value = res.data.data.columns.filter((c) => c.primaryKey > 0).map((c) => c.name)
     }
@@ -301,22 +348,12 @@ async function loadPkColumns() {
   }
 }
 
-function rowKeyOf(row: unknown[]): string {
-  const columns = data.value?.columns ?? []
-  return pkColumns.value
-    .map((pk) => {
-      const idx = columns.indexOf(pk)
-      return idx >= 0 ? String(row[idx] ?? '') : ''
-    })
-    .join('\u0001')
-}
-
 function isPkCell(ci: number): boolean {
   return pkColumns.value.includes(data.value?.columns[ci] ?? '')
 }
 
 function isDirty(rk: string, ci: number): boolean {
-  return editedCells.value[rk]?.[ci] !== undefined
+  return editedCells.value[rk]?.cells[ci] !== undefined
 }
 
 function isEditing(ri: number, ci: number): boolean {
@@ -325,8 +362,10 @@ function isEditing(ri: number, ci: number): boolean {
 
 function cellDisplay(row: unknown[], ci: number): { text: string; isNull: boolean } {
   const rk = rowKeyOf(row)
-  const edited = editedCells.value[rk]?.[ci]
-  if (edited !== undefined) return { text: displayCell(edited), isNull: false }
+  const edited = editedCells.value[rk]?.cells[ci]
+  if (edited !== undefined) {
+    return { text: displayCell(edited.text), isNull: edited.text.trim().toUpperCase() === 'NULL' }
+  }
   const v = row[ci]
   if (v === null || v === undefined) return { text: 'NULL', isNull: true }
   return { text: displayCell(v), isNull: false }
@@ -334,8 +373,8 @@ function cellDisplay(row: unknown[], ci: number): { text: string; isNull: boolea
 
 function cellFullText(row: unknown[], ci: number): string {
   const rk = rowKeyOf(row)
-  const edited = editedCells.value[rk]?.[ci]
-  if (edited !== undefined) return edited
+  const edited = editedCells.value[rk]?.cells[ci]
+  if (edited !== undefined) return edited.text
   const v = row[ci]
   return v === null || v === undefined ? '' : cellText(v)
 }
@@ -346,10 +385,9 @@ function startEdit(row: unknown[], ri: number, ci: number) {
   // 新格子不可编辑（无主键/主键列）：只提交并退出编辑状态
   if (!hasPk.value || isPkCell(ci)) return
   const rk = rowKeyOf(row)
-  const edited = editedCells.value[rk]?.[ci]
-  const original = row[ci] === null || row[ci] === undefined ? '' : String(row[ci])
+  const edited = editedCells.value[rk]?.cells[ci]
   editingCell.value = { rowKey: rk, colIndex: ci, rowIndex: ri }
-  editInput.value = edited !== undefined ? edited : original
+  editInput.value = edited !== undefined ? edited.text : cellText(row[ci])
   // 等新输入框挂载后再聚焦；旧输入框可能刚被移除，直接 nextTick 取到的引用可能无效
   setTimeout(() => {
     const el = editInputEl.value
@@ -367,24 +405,21 @@ function commitEdit() {
   const row = data.value?.rows[editing.rowIndex]
   const ci = editing.colIndex
   if (!row) return
-  const original = row[ci] === null || row[ci] === undefined ? '' : String(row[ci])
-  if (editInput.value === original && !isDirty(rk, ci)) return
-  if (!editedCells.value[rk]) editedCells.value[rk] = {}
-  editedCells.value[rk][ci] = editInput.value
+  const original = row[ci]
+  if (editInput.value === cellText(original)) {
+    // 改回原值：清除脏标记，避免无意义更新
+    if (editedCells.value[rk]) {
+      delete editedCells.value[rk].cells[ci]
+      if (Object.keys(editedCells.value[rk].cells).length === 0) delete editedCells.value[rk]
+    }
+    return
+  }
+  if (!editedCells.value[rk]) editedCells.value[rk] = { pk: pkValuesOf(row), cells: {} }
+  editedCells.value[rk].cells[ci] = { original, text: editInput.value }
 }
 
 function cancelEdit() {
   editingCell.value = null
-}
-
-function quoteIdent(s: string): string {
-  return `"${s.replace(/"/g, '""')}"`
-}
-
-function quoteValue(v: string): string {
-  // 空内容视为 NULL
-  if (v === '') return 'NULL'
-  return `'${v.replace(/'/g, "''")}'`
 }
 
 async function saveEdits() {
@@ -393,17 +428,25 @@ async function saveEdits() {
   const columns = data.value.columns
   const table = selectedTable.value
   try {
-    for (const [rk, cols] of Object.entries(editedCells.value)) {
-      const pkValues = rk.split('\u0001')
-      const where = pkColumns.value
-        .map((pk, i) => `${quoteIdent(pk)} = ${quoteValue(pkValues[i] ?? '')}`)
-        .join(' AND ')
-      const sets = Object.entries(cols)
-        .map(([ci, v]) => `${quoteIdent(columns[Number(ci)])} = ${quoteValue(v)}`)
-        .join(', ')
-      const sql = `UPDATE ${quoteIdent(table)} SET ${sets} WHERE ${where}`
-      const res = await runSqliteQuery(props.dbPath, sql)
+    for (const entry of Object.values(editedCells.value)) {
+      const built = buildUpdateSql(
+        table,
+        columns,
+        pkColumns.value,
+        entry.pk,
+        Object.entries(entry.cells).map(([ci, cell]) => ({
+          colIndex: Number(ci),
+          original: cell.original,
+          text: cell.text,
+        })),
+      )
+      if (built.kind === 'error') throw new Error(built.message)
+      const res = await runSqliteQuery(props.dbPath, built.sql)
       if (res.data.code !== 0) throw new Error(res.data.message || '保存失败')
+      const affected = res.data.data?.affectedRows
+      if (typeof affected === 'number' && affected === 0) {
+        throw new Error('未匹配到需要更新的行（数据可能已被其他进程修改），已中止保存')
+      }
     }
     notify.success('已保存修改')
     editedCells.value = {}
@@ -474,13 +517,7 @@ onBeforeUnmount(() => {
         >
           保存
         </v-btn>
-        <v-btn
-          icon="mdi-close"
-          variant="text"
-          size="small"
-          title="关闭"
-          @click="requestClose"
-        />
+        <v-btn icon="mdi-close" variant="text" size="small" title="关闭" @click="requestClose" />
       </template>
     </v-card-item>
 
@@ -539,97 +576,96 @@ onBeforeUnmount(() => {
           </template>
 
           <template v-else>
-              <!-- 数据预览 -->
-              <div class="d-flex align-center mb-2">
-                <span class="text-caption font-weight-bold">数据预览</span>
-                <v-spacer />
-                <v-select
-                  :model-value="pageSize"
-                  :items="pageSizeOptions"
-                  label="每页"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                  style="max-width: 110px"
-                  @update:model-value="changePageSize"
-                />
-              </div>
+            <!-- 数据预览 -->
+            <div class="d-flex align-center mb-2">
+              <span class="text-caption font-weight-bold">数据预览</span>
+              <v-spacer />
+              <v-select
+                :model-value="pageSize"
+                :items="pageSizeOptions"
+                label="每页"
+                variant="outlined"
+                density="compact"
+                hide-details
+                style="max-width: 110px"
+                @update:model-value="changePageSize"
+              />
+            </div>
 
-              <v-skeleton-loader v-if="dataLoading" type="table-row@6" />
-              <div
-                v-else-if="data"
-                class="result-card pa-2 d-flex flex-column"
-                style="flex: 1 1 0%; min-height: 0"
-              >
-                <div class="data-grid">
-                  <div class="data-grid-body">
-                    <div class="data-grid-row data-grid-header">
-                      <div
-                        v-for="col in data.columns"
-                        :key="col"
-                        class="data-grid-cell data-grid-header-cell"
-                        :style="{ width: colWidth(col) + 'px' }"
-                      >
-                        <span class="data-grid-label text-truncate">{{ col }}</span>
-                        <div
-                          class="col-resizer"
-                          @mousedown.prevent.stop="startResize(col, $event)"
-                          @dblclick.stop="autoFitColumn(col)"
-                        />
-                      </div>
-                    </div>
+            <v-skeleton-loader v-if="dataLoading" type="table-row@6" />
+            <div
+              v-else-if="data"
+              class="result-card pa-2 d-flex flex-column"
+              style="flex: 1 1 0%; min-height: 0"
+            >
+              <div class="data-grid">
+                <div class="data-grid-body">
+                  <div class="data-grid-row data-grid-header">
                     <div
-                      v-for="(row, ri) in data.rows"
-                      :key="ri"
-                      class="data-grid-row"
-                      :class="{ 'data-grid-row--alt': ri % 2 === 1 }"
+                      v-for="col in data.columns"
+                      :key="col"
+                      class="data-grid-cell data-grid-header-cell"
+                      :style="{ width: colWidth(col) + 'px' }"
                     >
+                      <span class="data-grid-label text-truncate">{{ col }}</span>
                       <div
-                        v-for="(cell, ci) in row"
-                        :key="ci"
-                        class="data-grid-cell"
-                        :class="{
-                          'data-grid-cell--edited': isDirty(rowKeyOf(row), ci),
-                          'data-grid-cell--editable': hasPk && !isPkCell(ci),
-                        }"
-                        :title="cellFullText(row, ci)"
-                        :style="{ width: colWidth(data.columns[ci]) + 'px' }"
-                        @dblclick="startEdit(row, ri, ci)"
-                      >
-                        <input
-                          v-if="isEditing(ri, ci)"
-                          :ref="setEditInputEl"
-                          v-model="editInput"
-                          class="cell-edit-input"
-                          @keydown.enter.prevent="commitEdit"
-                          @keydown.esc.stop.prevent="cancelEdit"
-                          @blur="commitEdit"
-                        />
-                        <template v-else>
-                          <span v-if="cellDisplay(row, ci).isNull" class="text-disabled">
-                            NULL
-                          </span>
-                          <span v-else>{{ cellDisplay(row, ci).text }}</span>
-                        </template>
-                      </div>
-                    </div>
-                    <div v-if="!data.rows.length" class="data-grid-empty">
-                      <span class="text-caption text-medium-emphasis">无数据</span>
+                        class="col-resizer"
+                        @mousedown.prevent.stop="startResize(col, $event)"
+                        @dblclick.stop="autoFitColumn(col)"
+                      />
                     </div>
                   </div>
-                </div>
-                <div class="d-flex align-center pa-2 flex-shrink-0">
-                  <span class="text-caption text-medium-emphasis">共 {{ data.total }} 行</span>
-                  <v-spacer />
-                  <v-pagination
-                    :model-value="page"
-                    :length="totalPages"
-                    :total-visible="7"
-                    density="compact"
-                    @update:model-value="changePage"
-                  />
+                  <div
+                    v-for="(row, ri) in data.rows"
+                    :key="ri"
+                    class="data-grid-row"
+                    :class="{ 'data-grid-row--alt': ri % 2 === 1 }"
+                  >
+                    <div
+                      v-for="(cell, ci) in row"
+                      :key="ci"
+                      class="data-grid-cell"
+                      :class="{
+                        'data-grid-cell--edited': isDirty(rowKeyOf(row), ci),
+                        'data-grid-cell--editable': hasPk && !isPkCell(ci),
+                      }"
+                      :title="cellFullText(row, ci)"
+                      :style="{ width: colWidth(data.columns[ci]) + 'px' }"
+                      @dblclick="startEdit(row, ri, ci)"
+                    >
+                      <input
+                        v-if="isEditing(ri, ci)"
+                        :ref="setEditInputEl"
+                        v-model="editInput"
+                        class="cell-edit-input"
+                        placeholder="留空=空字符串；输入 NULL 设为空值"
+                        @keydown.enter.prevent="commitEdit"
+                        @keydown.esc.stop.prevent="cancelEdit"
+                        @blur="commitEdit"
+                      />
+                      <template v-else>
+                        <span v-if="cellDisplay(row, ci).isNull" class="text-disabled"> NULL </span>
+                        <span v-else>{{ cellDisplay(row, ci).text }}</span>
+                      </template>
+                    </div>
+                  </div>
+                  <div v-if="!data.rows.length" class="data-grid-empty">
+                    <span class="text-caption text-medium-emphasis">无数据</span>
+                  </div>
                 </div>
               </div>
+              <div class="d-flex align-center pa-2 flex-shrink-0">
+                <span class="text-caption text-medium-emphasis">共 {{ data.total }} 行</span>
+                <v-spacer />
+                <v-pagination
+                  :model-value="page"
+                  :length="totalPages"
+                  :total-visible="7"
+                  density="compact"
+                  @update:model-value="changePage"
+                />
+              </div>
+            </div>
           </template>
         </div>
 
@@ -638,7 +674,7 @@ onBeforeUnmount(() => {
           <div ref="sqlEditorEl" class="sql-editor-host" />
           <div class="d-flex align-center mb-3">
             <span class="text-caption text-medium-emphasis">
-              单条语句，查询结果最多 1000 行 · Ctrl+Enter 执行
+              单条语句，查询结果最多 1000 行 · Ctrl+Enter 执行 · 写入语句需确认
             </span>
             <v-spacer />
             <v-btn
@@ -653,61 +689,65 @@ onBeforeUnmount(() => {
             </v-btn>
           </div>
 
+          <v-alert
+            v-if="queryError"
+            type="error"
+            density="compact"
+            variant="tonal"
+            class="query-alert mb-3"
+            :icon="queryErrorType === 'sql_syntax_error' ? 'mdi-code-braces' : 'mdi-alert'"
+            :title="queryErrorType === 'sql_syntax_error' ? 'SQL 语法错误' : undefined"
+          >
+            {{ queryError }}
+          </v-alert>
+
+          <template v-if="queryResult">
             <v-alert
-              v-if="queryError"
-              type="error"
+              v-if="queryResult.type === 'execute'"
+              type="success"
               density="compact"
               variant="tonal"
               class="query-alert mb-3"
-              :icon="queryErrorType === 'sql_syntax_error' ? 'mdi-code-braces' : 'mdi-alert'"
-              :title="queryErrorType === 'sql_syntax_error' ? 'SQL 语法错误' : undefined"
             >
-              {{ queryError }}
+              执行成功，受影响 {{ queryResult.affectedRows }} 行
             </v-alert>
 
-            <template v-if="queryResult">
-              <v-alert
-                v-if="queryResult.type === 'execute'"
-                type="success"
-                density="compact"
-                variant="tonal"
-                class="query-alert mb-3"
-              >
-                执行成功，受影响 {{ queryResult.affectedRows }} 行
-              </v-alert>
-
-              <div v-else class="result-card pa-2 flex-grow-1 d-flex flex-column" style="min-height: 0">
-                <div class="d-flex align-center mb-2">
-                  <span class="text-caption text-medium-emphasis">
-                    {{ queryResult.rows?.length ?? 0 }}
-                    行{{ queryResult.truncated ? '（已截断，最多 1000 行）' : '' }}
-                  </span>
-                </div>
-                <div class="result-scroll flex-grow-1">
-                  <v-table density="compact" fixed-header>
-                    <thead>
-                      <tr>
-                        <th v-for="c in queryResult.columns" :key="c" class="text-body-2">
-                          {{ c }}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(row, ri) in queryResult.rows" :key="ri">
-                        <td v-for="(cell, ci) in row" :key="ci" class="text-caption">
-                          <span v-if="cell === null || cell === undefined" class="text-disabled">
-                            NULL
-                          </span>
-                          <span v-else :title="cellTitle(cell)" class="cell-text">
-                            {{ displayCell(cell) }}
-                          </span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </v-table>
-                </div>
+            <div
+              v-else
+              class="result-card pa-2 flex-grow-1 d-flex flex-column"
+              style="min-height: 0"
+            >
+              <div class="d-flex align-center mb-2">
+                <span class="text-caption text-medium-emphasis">
+                  {{ queryResult.rows?.length ?? 0 }}
+                  行{{ queryResult.truncated ? '（已截断，最多 1000 行）' : '' }}
+                </span>
               </div>
-            </template>
+              <div class="result-scroll flex-grow-1">
+                <v-table density="compact" fixed-header>
+                  <thead>
+                    <tr>
+                      <th v-for="c in queryResult.columns" :key="c" class="text-body-2">
+                        {{ c }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(row, ri) in queryResult.rows" :key="ri">
+                      <td v-for="(cell, ci) in row" :key="ci" class="text-caption">
+                        <span v-if="cell === null || cell === undefined" class="text-disabled">
+                          NULL
+                        </span>
+                        <span v-else :title="cellTitle(cell)" class="cell-text">
+                          {{ displayCell(cell) }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </v-table>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -716,13 +756,26 @@ onBeforeUnmount(() => {
     <v-dialog v-model="discardDialog" max-width="400">
       <v-card class="glass-card pa-4">
         <v-card-title class="text-body-1 font-weight-bold px-0 pt-0">未保存的编辑</v-card-title>
-        <v-card-text class="px-0">
-          有 {{ dirtyCount }} 处未保存的修改，是否抛弃？
-        </v-card-text>
+        <v-card-text class="px-0"> 有 {{ dirtyCount }} 处未保存的修改，是否抛弃？ </v-card-text>
         <v-card-actions class="px-0 pb-0">
           <v-spacer />
           <v-btn variant="text" @click="cancelDiscard">取消</v-btn>
           <v-btn color="error" variant="tonal" @click="doDiscard">抛弃</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- 写入类 SQL 执行确认 -->
+    <v-dialog v-model="confirmRun" max-width="420">
+      <v-card class="glass-card pa-4">
+        <v-card-title class="text-body-1 font-weight-bold px-0 pt-0">确认执行写入语句</v-card-title>
+        <v-card-text class="px-0">
+          当前语句不是只读查询，可能修改、删除或重建数据，确定执行吗？
+        </v-card-text>
+        <v-card-actions class="px-0 pb-0">
+          <v-spacer />
+          <v-btn variant="text" @click="confirmRun = false">取消</v-btn>
+          <v-btn color="error" variant="tonal" @click="confirmExecute">执行</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
