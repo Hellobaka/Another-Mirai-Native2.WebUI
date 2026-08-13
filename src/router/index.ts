@@ -9,6 +9,7 @@ import Logs from '@/pages/Logs.vue'
 import Settings from '@/pages/Settings.vue'
 import Protocol from '@/pages/Protocol.vue'
 import Chat from '@/pages/Chat.vue'
+import Files from '@/pages/Files.vue'
 
 const router = createRouter({
   history: createWebHistory('/'),
@@ -28,6 +29,7 @@ const router = createRouter({
         { path: 'plugins', name: 'Plugins', component: Plugins },
         { path: 'logs', name: 'Logs', component: Logs },
         { path: 'chat', name: 'Chat', component: Chat },
+        { path: 'files', name: 'Files', component: Files },
         { path: 'protocol', name: 'Protocol', component: Protocol },
         { path: 'settings', name: 'Settings', component: Settings },
       ],

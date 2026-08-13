@@ -35,6 +35,24 @@ export type { GetConfigResponseItem, SetConfigRequest, CoreConfigMap, ProtocolCo
 export type { LogDto, LogQueryResultData, LogLevelValue } from './log'
 export { LogLevel } from './log'
 export type {
+  FileEntry,
+  FileListData,
+  CopyMoveRequest,
+  DeleteRequest,
+  TextFileData,
+  FolderSizeData,
+  SearchResultData,
+  WriteTextRequest,
+} from './file'
+export type {
+  SqliteTableInfo,
+  SqliteColumnInfo,
+  SqliteIndexInfo,
+  SqliteSchemaData,
+  SqliteDataData,
+  SqliteQueryResult,
+} from './sqlite'
+export type {
   GroupMsgPayload,
   PrivateMsgPayload,
   GroupMemberChangedPayload,

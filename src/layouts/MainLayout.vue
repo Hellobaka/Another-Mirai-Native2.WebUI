@@ -86,7 +86,7 @@ function closeOnMobile() {
   if (isMobile.value) app.drawerOpen = false
 }
 
-const APP_VERSION = '1.1.1'
+const APP_VERSION = '1.2.0'
 
 onMounted(async () => {
   if (isMobile.value) app.drawerOpen = false

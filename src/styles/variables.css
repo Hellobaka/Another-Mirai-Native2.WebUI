@@ -57,3 +57,25 @@
   opacity: 0;
   transform: translateY(16px);
 }
+
+/* Monaco 的 codicon 图标字体：官方 codicon.css 会被 rolldown 分到懒加载的
+   高对比度主题块里，普通主题下不加载会导致折叠图标等显示为乱码，这里全局补齐 */
+@font-face {
+  font-family: 'codicon';
+  font-display: block;
+  src: url('../../node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.ttf')
+    format('truetype');
+}
+
+.codicon[class*='codicon-'] {
+  font: normal normal normal 16px/1 codicon !important;
+  display: inline-block;
+  text-decoration: none;
+  text-rendering: auto;
+  text-align: center;
+  text-transform: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+  -webkit-user-select: none;
+}

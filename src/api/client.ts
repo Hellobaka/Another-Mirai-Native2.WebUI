@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { getApiBaseUrl } from './baseUrl'
+import { parseApiErrorPayload, parseBlobError } from '@/utils/apiError'
 
 const TOKEN_KEY = 'amn_token'
 const EXPIRES_KEY = 'amn_expires'
@@ -25,7 +26,7 @@ http.interceptors.request.use((config) => {
 
 http.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     // Skip forced logout for the refresh endpoint — auth store handles that case
     const isRefreshCall = error.config?.url?.includes('/auth/refresh')
     if (
@@ -37,7 +38,14 @@ http.interceptors.response.use(
       localStorage.removeItem(EXPIRES_KEY)
       window.location.replace('/login')
     }
-    error.apiMessage = error.response?.data?.message || null
+    // 下载等 blob 响应出错时，响应体是 Blob，先按 JSON 解析再提取错误信息
+    const responseData = error.response?.data
+    const parsed =
+      responseData instanceof Blob
+        ? await parseBlobError(responseData)
+        : parseApiErrorPayload(responseData)
+    error.apiMessage = parsed.message || null
+    error.apiErrorType = parsed.errorType || null
     const retryAfter = error.response?.headers?.['retry-after']
     error.retryAfter = retryAfter ? Number(retryAfter) : null
     return Promise.reject(error)
@@ -48,6 +56,7 @@ http.interceptors.response.use(
 export function getErrorMessage(e: unknown, fallback: string): string {
   const err = e as {
     apiMessage?: string | null
+    apiErrorType?: string | null
     retryAfter?: number | null
     message?: string
     code?: string
@@ -65,6 +74,8 @@ export function getErrorMessage(e: unknown, fallback: string): string {
   }
 
   // API returned an error with a server message
+  // 文件被其他程序占用：统一友好提示（即使后端 message 缺失）
+  if (err.apiErrorType === 'file_in_use') return '文件被其他程序占用，请稍后重试'
   if (err.apiMessage) return err.apiMessage
   if (err.response?.data?.message) return err.response.data.message
 
