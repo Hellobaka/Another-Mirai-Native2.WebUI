@@ -115,8 +115,12 @@ let monacoNs: typeof import('monaco-editor') | null = null
 
 async function ensureSqlEditor() {
   if (sqlEditor || !sqlEditorEl.value) return
-  const monaco = await import('monaco-editor')
+  const [monaco, { setupMonacoWorkers }] = await Promise.all([
+    import('monaco-editor'),
+    import('@/utils/monacoWorkers'),
+  ])
   await import('monaco-editor/nls/lang/zh-cn.js')
+  setupMonacoWorkers()
   monacoNs = monaco
   monaco.editor.setTheme(app.effectiveTheme === 'light' ? 'vs' : 'vs-dark')
   sqlEditor = monaco.editor.create(sqlEditorEl.value, {

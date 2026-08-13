@@ -6,12 +6,15 @@ import { useAppStore } from '@/stores/app'
 import { useNotifyStore } from '@/stores/notify'
 import { readTextFile, writeTextFile } from '@/api/file'
 import { getErrorMessage } from '@/api/client'
+import { setupMonacoWorkers } from '@/utils/monacoWorkers'
 
 const props = defineProps<{
   open: boolean
   path: string
   name: string
 }>()
+
+setupMonacoWorkers()
 
 const emit = defineEmits<{
   close: []
