@@ -32,12 +32,18 @@ export function renameEntry(path: string, newName: string) {
 
 /** 复制 (POST /api/files/copy) */
 export function copyEntries(sources: string[], targetDir: string) {
-  return http.post<ApiResponse<null>>('/files/copy', { sources, targetDir } satisfies CopyMoveRequest)
+  return http.post<ApiResponse<null>>('/files/copy', {
+    sources,
+    targetDir,
+  } satisfies CopyMoveRequest)
 }
 
 /** 移动 (POST /api/files/move) */
 export function moveEntries(sources: string[], targetDir: string) {
-  return http.post<ApiResponse<null>>('/files/move', { sources, targetDir } satisfies CopyMoveRequest)
+  return http.post<ApiResponse<null>>('/files/move', {
+    sources,
+    targetDir,
+  } satisfies CopyMoveRequest)
 }
 
 /** 删除到回收站 (POST /api/files/delete) */
@@ -49,16 +55,25 @@ export function deleteEntries(paths: string[]) {
 export function readTextFile(path: string, encoding = '') {
   return http.get<ApiResponse<TextFileData>>('/files/text', {
     params: encoding ? { path, encoding } : { path },
+    // 10MB 上限的文本文件在慢速网络下可能超过默认 15s
+    timeout: 60000,
   })
 }
 
 /** 写入文本文件 (POST /api/files/text)，encoding 留空按原文件识别编码写回 */
 export function writeTextFile(path: string, content: string, encoding = '') {
-  return http.post<ApiResponse<null>>('/files/text', {
-    path,
-    content,
-    ...(encoding ? { encoding } : {}),
-  } satisfies WriteTextRequest)
+  return http.post<ApiResponse<null>>(
+    '/files/text',
+    {
+      path,
+      content,
+      ...(encoding ? { encoding } : {}),
+    } satisfies WriteTextRequest,
+    {
+      // 10MB 上限的文本文件在慢速网络下可能超过默认 15s
+      timeout: 60000,
+    },
+  )
 }
 
 /** 下载文件/文件夹 (GET /api/files/download)；传多个 path 时后端流式打包为 ZIP */
@@ -79,13 +94,19 @@ export function downloadFile(path: string) {
 
 /** 统计文件夹大小 (GET /api/files/size) */
 export function getFolderSize(path: string) {
-  return http.get<ApiResponse<FolderSizeData>>('/files/size', { params: { path } })
+  return http.get<ApiResponse<FolderSizeData>>('/files/size', {
+    params: { path },
+    // 递归统计大目录可能超过默认 15s
+    timeout: 60000,
+  })
 }
 
 /** 搜索文件/文件夹 (GET /api/files/search)，pattern 必填，path 为起始目录（默认根目录），limit 最多返回条数（默认 200） */
 export function searchFiles(pattern: string, path = '', limit = 200) {
   return http.get<ApiResponse<SearchResultData>>('/files/search', {
     params: path ? { pattern, path, limit } : { pattern, limit },
+    // 递归搜索大目录可能超过默认 15s
+    timeout: 60000,
   })
 }
 

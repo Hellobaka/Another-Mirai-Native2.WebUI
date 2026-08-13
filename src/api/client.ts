@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { getApiBaseUrl } from './baseUrl'
+import { parseApiErrorPayload, parseBlobError } from '@/utils/apiError'
 
 const TOKEN_KEY = 'amn_token'
 const EXPIRES_KEY = 'amn_expires'
@@ -25,7 +26,7 @@ http.interceptors.request.use((config) => {
 
 http.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     // Skip forced logout for the refresh endpoint — auth store handles that case
     const isRefreshCall = error.config?.url?.includes('/auth/refresh')
     if (
@@ -37,9 +38,14 @@ http.interceptors.response.use(
       localStorage.removeItem(EXPIRES_KEY)
       window.location.replace('/login')
     }
-    error.apiMessage = error.response?.data?.message || null
-    const errorData = error.response?.data as { data?: { errorType?: string } } | null
-    error.apiErrorType = errorData?.data?.errorType || null
+    // 下载等 blob 响应出错时，响应体是 Blob，先按 JSON 解析再提取错误信息
+    const responseData = error.response?.data
+    const parsed =
+      responseData instanceof Blob
+        ? await parseBlobError(responseData)
+        : parseApiErrorPayload(responseData)
+    error.apiMessage = parsed.message || null
+    error.apiErrorType = parsed.errorType || null
     const retryAfter = error.response?.headers?.['retry-after']
     error.retryAfter = retryAfter ? Number(retryAfter) : null
     return Promise.reject(error)
@@ -82,11 +88,6 @@ export function getErrorMessage(e: unknown, fallback: string): string {
   if (err.message) return err.message
 
   return fallback
-}
-
-/** 提取后端返回的业务错误类型（如 file_in_use / sql_syntax_error） */
-export function getApiErrorType(e: unknown): string {
-  return (e as { apiErrorType?: string | null })?.apiErrorType || ''
 }
 
 export default http
