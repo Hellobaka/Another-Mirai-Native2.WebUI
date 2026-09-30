@@ -28,6 +28,7 @@ export function replyPreview(items: MessageItemBase[]): string {
       }
       if (m.messageItemType === MessageItemType.Image) return '[图片]'
       if (m.messageItemType === MessageItemType.Record) return '[语音]'
+      if (m.messageItemType === MessageItemType.Video) return '[视频]'
       if (m.messageItemType === MessageItemType.Face || m.messageItemType === MessageItemType.Bface) return '[表情]'
       if (m.messageItemType === MessageItemType.Reply) return '[回复]'
       if (m.messageItemType === MessageItemType.File) return `[文件] ${(m as unknown as { fileName: string }).fileName}`
@@ -44,6 +45,7 @@ export function isPureMedia(items: MessageItemBase[]): boolean {
     (m) =>
       m.messageItemType === MessageItemType.Image ||
       m.messageItemType === MessageItemType.Record ||
+      m.messageItemType === MessageItemType.Video ||
       m.messageItemType === MessageItemType.File,
   )
 }

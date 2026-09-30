@@ -36,9 +36,14 @@ function senderDisplay(): string {
   return nick
 }
 
-function mediaUrl(item: MessageItemBase, type: 'image' | 'record'): string {
+function mediaUrl(item: MessageItemBase, type: 'image' | 'record' | 'video'): string {
   const m = item as unknown as { hash?: string; filePath?: string | null }
-  return cacheUrl(type, m.filePath || m.hash || '')
+  const file = m.filePath || m.hash || ''
+  if (type === 'video') {
+    if (/^https?:\/\//i.test(file)) return file
+    if (file.startsWith('base64://')) return `data:video/mp4;base64,${file.slice(9)}`
+  }
+  return cacheUrl(type, file)
 }
 
 function onContextMenu(e: MouseEvent) {
@@ -176,6 +181,12 @@ function fmtUnknown(item: unknown): string {
                 class="msg-audio"
                 controls preload="metadata"
               />
+              <video
+                v-else-if="item.messageItemType === MessageItemType.Video"
+                :src="mediaUrl(item, 'video')"
+                class="msg-video"
+                controls preload="none"
+              />
               <div v-else-if="item.messageItemType === MessageItemType.File" class="msg-file-card">
                 <v-icon icon="mdi-file-outline" size="20" class="mr-2" />
                 <div class="msg-file-info">
@@ -287,6 +298,12 @@ function fmtUnknown(item: unknown): string {
                 controls preload="metadata"
               />
               <!-- File -->
+              <video
+                v-else-if="item.messageItemType === MessageItemType.Video"
+                :src="mediaUrl(item, 'video')"
+                class="msg-video"
+                controls preload="none"
+              />
               <div v-else-if="item.messageItemType === MessageItemType.File" class="msg-file-card">
                 <v-icon icon="mdi-file-outline" size="20" class="mr-2" />
                 <div class="msg-file-info">
@@ -532,6 +549,7 @@ function fmtUnknown(item: unknown): string {
 }
 
 .msg-audio { display: block; max-width: 280px; height: 36px; margin: 2px 0; }
+.msg-video { display: block; max-width: 100%; width: 320px; max-height: 450px; margin: 2px 0; }
 
 .msg-file-card {
   display: inline-flex;

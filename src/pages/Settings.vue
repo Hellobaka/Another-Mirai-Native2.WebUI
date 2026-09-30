@@ -46,10 +46,11 @@ const configSections = [
   },
   { title: '数据', icon: 'mdi-database', keys: ['UseDatabase', 'MessageCacheSize'] },
   {
-    title: '图片缓存',
+    title: '媒体缓存',
     icon: 'mdi-image',
     keys: [
       'EnableChat',
+      'SaveVideoToLocal',
       'EnableChatImageCacheMaxSizeControl',
       'MaxChatImageCacheFolderSize',
       'EnableChatImageCacheExpireTimeControl',
